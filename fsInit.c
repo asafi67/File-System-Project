@@ -122,7 +122,7 @@ int initDir(int minEntries, DE* parent) {
     DE* newDir = (DE*)malloc(bytesToAlloc); // Dynamically allocate memory for the directory entries
 
     int i;
-    for (i = 0; i < actualEntries; i++) {
+    for (i = 2; i < actualEntries; i++) {
         // Initialize each entry
         strcpy(newDir[i].name, "File");  // Set a generic name for each file
         newDir[i].size = 0;
