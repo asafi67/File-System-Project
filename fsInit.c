@@ -42,24 +42,27 @@ typedef struct{
 	int count;
 }blockAllocation;
 
-int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
-	{
-	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
-	/* TODO: Add any code you need to initialize your file system. */
-	
-	//Mallock a block of memory as VCB pointer
-	VolumeControlBlock* vcb = (VolumeControlBlock*)malloc(sizeof(VolumeControlBlock));
+void releaseBlocks(int start, int count){
+		
+	//update the bitmap to mark the blocks as free 0x00
+	for (int i = 0; i < count; i++){
+			
+	//where the bit for this block is located in the bitmap
+	int index = (start + i)/8;
+			
+	//acquire bit position between 0-7
+	int bit = (start + i) % 8;
 
-	//LBA read block 0
-	LBAread(0, vcb, sizeof(VolumeControlBlock));
+	//set bit to zero
+	bitmap[index] &= ~(1 << bit);
+	}
+		
+	//write the updated bitrmap back to the disk
 
-	
-	if(vcb->numOfBlocks != 0 || vcb->blockSize != 0){
-	//If the volume control block has already been initialized
-	//We can put the code for that case in this section
+}
 
-	//when there already is initialized VCB.
-	int loadFreeSpace(int blockCount, int bytesPerBlock){
+//when there already is initialized VCB.
+int loadFreeSpace(int blockCount, int bytesPerBlock){
 	
 	//load the bitmap from the volume here
 
@@ -94,9 +97,59 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	//exit
 	return 0;
+}
+
+//Initialize free space
+int initFreeSpace(int blockCount, int bytesPerBlock){
+		
+	//allocate enough space in bitmap, rounding up to nearest byte
+	bitmap = malloc((blockCount + 7)/8)
+		
+	//error check
+	if(!bitmap){
+		printf("bitmap failed to allocate");
+		return -1;
 	}
 
+	//setting all bits to 0 meaning free
+	memset(bitmap, 0x00, (blockCount +7)/8);
 
+	//write the bitamp to the disk here
+
+	//exit
+	return 0;
+}
+
+blockAllocation allocateBlocks (int required, int minPerExtent){
+	blockAllocation ba;
+	//search bitmap for a sequence of of continuous free space blocks here
+
+	//once a sequence of continuous free space is found, update the bitmap
+
+	//write updated bitmap back to the disk
+
+
+	//return the start block and count
+	ba.start = ;
+	ba.count = ;
+	return ba;
+}
+
+int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
+	{
+	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
+	/* TODO: Add any code you need to initialize your file system. */
+	
+	//Mallock a block of memory as VCB pointer
+	VolumeControlBlock* vcb = (VolumeControlBlock*)malloc(sizeof(VolumeControlBlock));
+
+	//LBA read block 0
+	LBAread(0, vcb, sizeof(VolumeControlBlock));
+
+	
+	if(vcb->numOfBlocks != 0 || vcb->blockSize != 0){
+	//If the volume control block has already been initialized
+	//We can put the code for that case in this section
 
 	}else{
 		//Following code is what we do if VCB has not been initialized already
@@ -107,67 +160,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb->freeBlocks = numberOfBlocks;
 		vcb->allocatedBlocks = 0;
 
-		//Initialize free space
-		int initFreeSpace(int blockCount, int bytesPerBlock){
-		
-		//allocate enough space in bitmap, rounding up to nearest byte
-		bitmap = malloc((blockCount + 7)/8)
-		
-		//error check
-		if(!bitmap){
-			printf("bitmap failed to allocate");
-			return -1;
-			}
-
-		//setting all bits to 0 meaning free
-		memset(bitmap, 0x00, (blockCount +7)/8);
-
-		//write the bitamp to the disk here
-
-		//exit
-		return 0;
-		}
-
-		blockAllocation allocateBlocks (int required, int minPerExtent){
-			blockAllocation ba;
-			//search bitmap for a sequence of of continuous free space blocks here
-
-			//once a sequence of continuous free space is found, update the bitmap
-
-			//write updated bitmap back to the disk
-
-
-			//return the start block and count
-			ba.start = ;
-			ba.count = ;
-			return ba;
-		}
-
-		void releaseBlocks(int start, int count){
-		
-			//update the bitmap to mark the blocks as free 0x00
-			for (int i = 0; i < count; i++){
-			
-			//where the bit for this block is located in the bitmap
-			int index = (start + i)/8;
-			
-			//acquire bit position between 0-7
-			int bit = (start + i) % 8;
-
-			//set bit to zero
-			bitmap[index] &= ~(1 << bit);
-			}
-		
-		//write the updated bitrmap back to the disk
-
-		}
+		//Initialize the free space
+		initFreeSpace();
 		//Initialize the root directory
 
 		//Set the values returned from free space and root directory in the VCB
 		//LBAwrite the VCB to block 0
-
-
-
 	}
 
 
