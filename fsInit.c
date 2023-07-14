@@ -164,66 +164,15 @@ blockAllocation allocateBlocks (int required, int minPerExtent){
     int foundSpace = 0;
 
 	//search bitmap for a sequence of of continuous free space blocks here
-    for(int i = 0; i < bitmapSize; i++){
-        for(int j = 0; j < bytesPerBlock; j++){
-            //check if block free
-            if(!(bitmap[i] & (1 << j))) {
-                if(ba.start == -1){ // check if first free block
-                ba.start = i * bytesPerBlock + j;
-                }
 
-                foundSpace++; //increment count of found free blocks
-                
-                // check if we hit the required ammount of free blocks
-                if(foundSpace == required){
+	//once a sequence of continuous free space is found, update the bitmap
 
-                    ba.count = foundSpace; //set count to the count found
+	//write updated bitmap back to the disk
 
-                    //loop to mark these blocks as allocated in bitmap
-                    for(int k = 0; k < foundSpace; k++){
-                        //bitwise OR assignment 
-                        bitmap[ba.start / bytesPerBlock + k/bytesPerBlock] |=
-                        (1<<(ba.start % bytesPerBlock + k % bytesPerBlock));
-                    }
 
-                    // Calculate the number of blocks required to store the bitmap.
-                    // rounding up, dividing the size of the bitmap by the number of bytes per block, 
-                    int blocksNeeded = (bitmapSize + bytesPerBlock - 1) / bytesPerBlock;
-                    
-                    // loop iterates over each of the blocks needed to store the bitmap
-                    for(int y = 0; y < blocksNeeded; y++){
-                        
-                        //  an attempt to write each block of the bitmap to the disk using the LBAwrite function.
-                        // 'bitmap + y * bytesPerBlock' calculates the memory address of the block to be written.
-                        //  y is the number of blocks to write.
-                        //  y + 1 is the starting LBA (Logical Block Address) to write to.
-                        if(LBAwrite(bitmap + y * bytesPerBlock, 1, 1 + y) != 1){
-                            
-                            // if the write to the disk failed than we're inside the if
-                            printf("bitmap failed to write to disk");
-                            // set start and count to indicate failure and return the structure
-                            ba.start = -1;
-                            ba.count = 0;
-                            return ba;
-                        }
-                    }
-                    //return the start block and count
-                    return ba;
-
-                }
-
-            } else {
-                //block requested is not free 
-                ba.start = -1; //reset the sequence
-                foundSpace = 0;
-            }
-        }
-    }
-
-	// if here, we couldnt find enough free space
-	printf("Could not allocatre enough free blocks\n");
-    ba.start = -1;
-	ba.count = 0;
+	//return the start block and count
+	ba.start = ;
+	ba.count = ;
 	return ba;
 }
 
