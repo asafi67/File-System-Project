@@ -235,7 +235,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
     VolumeControlBlock* vcb = (VolumeControlBlock*)malloc(sizeof(VolumeControlBlock));
 
     // We read the content of block 0 from the disk using logical block addressing
-    LBAread(0, vcb, sizeof(VolumeControlBlock));
+    LBAread(vcb, 0, sizeof(VolumeControlBlock));
 
 	//First condition is in place to check if the VCB has already been initialized
     if (vcb->numOfBlocks != 0 || vcb->blockSize != 0) {
