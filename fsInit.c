@@ -231,15 +231,15 @@ blockAllocation allocateBlocks (int required, int minPerExtent){
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
     printf("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 
-    // Malloc a block of memory as VCB pointer
+    // We dynamically allocate memory for the volume control block structure
     VolumeControlBlock* vcb = (VolumeControlBlock*)malloc(sizeof(VolumeControlBlock));
 
-    // LBA read block 0
+    // We read the content of block 0 from the disk using logical block addressing
     LBAread(0, vcb, sizeof(VolumeControlBlock));
 
+	//First condition is in place to check if the VCB has already been initialized
     if (vcb->numOfBlocks != 0 || vcb->blockSize != 0) {
-        // If the volume control block has already been initialized
-        // We can put the code for that case in this section
+    
 
         // TODO: Load free space
         loadFreeSpace(numberOfBlocks,blockSize);
