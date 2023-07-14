@@ -109,7 +109,7 @@ int loadFreeSpace(int blockCount, int bytesPerBlock){
 int initFreeSpace(int blockCount, int bytesPerBlock){
 		
 	//allocate enough space in bitmap, rounding up to nearest byte
-	bitmap = malloc((blockCount + 7)/8)
+	bitmap = malloc((blockCount + 7)/8);
 		
 	//error check
 	if(!bitmap){
@@ -136,8 +136,8 @@ blockAllocation allocateBlocks (int required, int minPerExtent){
 
 
 	//return the start block and count
-	ba.start = ;
-	ba.count = ;
+	ba.start = 0;
+	ba.count = 0;
 	return ba;
 }
 
@@ -167,7 +167,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
         vcb->allocatedBlocks = 0;
 
         // Initialize free space
-        initFreeSpace(numOfBlocks,blockSize);
+        initFreeSpace(numberOfBlocks,blockSize);
 
         // Function declaration for initDir
         int initDir(int minEntries, DE* parent);
