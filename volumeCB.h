@@ -1,10 +1,10 @@
-
-
-
-
-
+#ifndef _VCB_H_
+#define _VCB_H_
 
 typedef struct {
+
+    unsigned int magicNumber;
+    
     unsigned int numOfBlocks;
     unsigned int blockSize;
     unsigned int freeBlocks;
@@ -12,4 +12,6 @@ typedef struct {
 } VolumeControlBlock;
 
 extern VolumeControlBlock* vcb;
+
+#endif
 

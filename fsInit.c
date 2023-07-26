@@ -26,6 +26,8 @@
 #include "bitmap.h"
 #include "volumeCB.h"
 
+//this is a signature for the file system in order to check whether fs is mounted
+#define MAGIC_NUMBER 415001
 
 int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
     printf("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
@@ -37,7 +39,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
     LBAread(vcb, 0, sizeof(VolumeControlBlock));
 
 	//First condition is in place to check if the VCB has already been initialized
-    if (vcb->numOfBlocks != 0 || vcb->blockSize != 0) {
+    if (vcb->magicNumber == MAGIC_NUMBER) {
     
 
         // TODO: Load free space
@@ -47,6 +49,7 @@ int initFileSystem(uint64_t numberOfBlocks, uint64_t blockSize) {
         // Following code is what we do if VCB has not been initialized already
 
         // Initialize values in volume control block
+        vcb->magicNumber = MAGIC_NUMBER;
         vcb->numOfBlocks = numberOfBlocks;
         vcb->blockSize = blockSize;
         vcb->freeBlocks = numberOfBlocks;

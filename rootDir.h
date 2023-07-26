@@ -1,6 +1,5 @@
-
-
-
+#ifndef ROOTDIR_H_
+#define ROOTDIR_H_
 
 
 // Structure for directory entry
@@ -11,3 +10,5 @@ typedef struct {
 } DE;
 
 int initDir(int minEntries, DE* parent);
+
+#endif
