@@ -62,10 +62,10 @@ int loadFreeSpace(int blockCount, int bytesPerBlock){
 		}
 	
 	//calculate how many blocks the bitmap spans
-	uint64_t blocks = (bitmapSize + bytesPerBlock -1)/bytesPerBlock;
+	long long blocks = (bitmapSize + bytesPerBlock -1)/bytesPerBlock;
 	
 	//loop through the bits
-	for(uint64_t i = 0; i < blocks; i++){
+	for(uint64_t i = 0; i < blocks-1; i++){
 		
 		//attempt to read the block
 		if (LBAread(bitmap + i * bytesPerBlock, 1, 1 +i) != 1){

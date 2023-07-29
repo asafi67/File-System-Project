@@ -15,6 +15,54 @@
 char* cwdString = "/";
 DE* cwdPointer;
 
+PathReturn parsePath(char* path, DE* currentDir) {
+    PathReturn result;
+    result.dir = NULL;
+    result.statusCode = -1;
+    result.indexLast = -1;
+
+    if (currentDir == NULL || path == NULL || strlen(path) == 0) {
+        return result;
+    }
+
+    // Copy the path into a temporary buffer for parsing
+    char tempPath[strlen(path) + 1];
+    strcpy(tempPath, path);
+
+    char* token = strtok(tempPath, "/");
+    DE* dir = currentDir;
+
+    // Tokenize the path and traverse the directories
+    while (token != NULL) {
+        // Find the current token (directory name) in the current directory
+        DE* foundDir = NULL;
+        for (int i = 0; dir[i].name[0] != '\0'; i++) {
+            if (strcmp(dir[i].name, token) == 0) {
+                foundDir = &dir[i];
+                break;
+            }
+        }
+
+        // If the directory was not found, return with an error status
+        if (foundDir == NULL) {
+            result.statusCode = -1;
+            result.indexLast = -1;
+            return result;
+        }
+
+        // Update the current directory and token for the next iteration
+        dir = foundDir;
+        token = strtok(NULL, "/");
+    }
+
+    // Path successfully parsed, set the result and return
+    result.dir = dir;
+    result.statusCode = 0;
+    result.indexLast = 0; // You can update this index based on your specific use case
+
+    return result;
+}
+
 int fs_mkdir(const char *pathname, mode_t mode) {
     // Check if the directory already exists
     if (fs_isDir(pathname)) {
@@ -26,7 +74,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     char parentPath[256];
     char dirName[256];
     int indexLast;
-    PathReturn parentPathReturn = parsePath(pathname);
+    PathReturn parentPathReturn = parsePath(pathname, cwdPointer);
     DE* parentDir = parentPathReturn.dir;
 
     if (parentDir == NULL) {
@@ -63,7 +111,7 @@ int fs_rmdir(const char *pathname) {
         return -1;
     }
 
-    PathReturn pathReturn = parsePath(pathname);
+    PathReturn pathReturn = parsePath(pathname, cwdPointer);
     DE* dir = pathReturn.dir;
 
     // Check if the directory is empty (only contains . and .. entries)
@@ -88,7 +136,7 @@ int fs_rmdir(const char *pathname) {
     LBAwrite(parentDir, parentDir[0].size, parentDir->loc);
 
     // Mark the directory's blocks as unallocated
-    freeBlocks(dir->loc);
+    releaseBlocks(dir->loc, dir->size, dir->size);
 
     return 0; // Return success
 }
@@ -109,7 +157,7 @@ fdDir * fs_opendir(const char *pathname) {
     }
 
     // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname);
+    PathReturn pathReturn = parsePath(pathname, cwdPointer);
     DE* dir = pathReturn.dir;
 
     // Initialize the fdDir structure
@@ -176,7 +224,7 @@ char * fs_getcwd(char *pathname, size_t size) {
 
 int fs_setcwd(char *pathname) {
     // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname);
+    PathReturn pathReturn = parsePath(pathname, cwdPointer);
     DE* dir = pathReturn.dir;
 
     // Check if the directory exists and is a valid directory
@@ -195,7 +243,7 @@ int fs_setcwd(char *pathname) {
 
 int fs_isFile(char *filename) {
     // Parse the path and get the DE* for the file
-    PathReturn pathReturn = parsePath(filename);
+    PathReturn pathReturn = parsePath(filename, cwdPointer);
     DE* file = pathReturn.dir;
 
     // Check if the file exists and is a valid regular file
@@ -209,7 +257,7 @@ int fs_isFile(char *filename) {
 
 int fs_isDir(char *pathname) {
     // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname);
+    PathReturn pathReturn = parsePath(pathname, cwdPointer);
     DE* dir = pathReturn.dir;
 
     // Check if the directory exists and is a valid directory
@@ -221,7 +269,7 @@ int fs_isDir(char *pathname) {
 }
 int fs_delete(char* filename) {
     // Parse the path and get the DE* for the file
-    PathReturn pathReturn = parsePath(filename);
+    PathReturn pathReturn = parsePath(filename, cwdPointer);
     DE* file = pathReturn.dir;
 
     // Check if the file exists and is a valid regular file
@@ -245,7 +293,7 @@ int fs_delete(char* filename) {
     LBAwrite(parentDir, parentDir[0].size, parentDir->loc);
 
     // Mark the file's blocks as unallocated
-    freeBlocks(file->loc);
+    releaseBlocks(file->loc, file->size, file->loc);
 
     return 0; // Return success
 }
@@ -253,7 +301,7 @@ int fs_delete(char* filename) {
 
 int fs_stat(const char *path, struct fs_stat *buf) {
     // Parse the path and get the DE* for the file/directory
-    PathReturn pathReturn = parsePath(path);
+    PathReturn pathReturn = parsePath(path, cwdPointer);
     DE* entry = pathReturn.dir;
 
     // Check if the entry exists

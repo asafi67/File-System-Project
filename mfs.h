@@ -41,7 +41,7 @@ typedef struct PathReturn{
 	int indexLast;
 }PathReturn;
 
-struct PathReturn parsePath (char* path);
+PathReturn parsePath (char* path, DE* currentDir);
 
 
 

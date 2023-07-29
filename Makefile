@@ -43,7 +43,7 @@ CFLAGS= -g -I.
 LIBS =pthread
 DEPS = 
 # Add any additional objects to this list
-ADDOBJ= fsInit.o bitmap.o rootDir.o volumeCB.o 
+ADDOBJ= fsInit.o bitmap.o rootDir.o volumeCB.o mfs.o
 ARCH = $(shell uname -m)
 
 ifeq ($(ARCH), aarch64)
@@ -58,7 +58,7 @@ OBJ = $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ARCHOBJ)
 	$(CC) -c -o $@ $< $(CFLAGS) 
 
 $(ROOTNAME)$(HW)$(FOPTION): $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS) -lm -l readline -l $(LIBS)
+	$(CC) -o $@ $^ $(CFLAGS) -lm -l readline -l $(LIBS) 
 
 clean:
 	rm $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ROOTNAME)$(HW)$(FOPTION)
