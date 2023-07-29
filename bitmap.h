@@ -3,6 +3,8 @@
 
 
 extern char* bitmap;
+extern int bitmapBS;
+
 // Structure for free space block allocation
 typedef struct {
     int start;
@@ -12,5 +14,8 @@ void releaseBlocks(int start, int count, int bytesPerBlock);
 int loadFreeSpace(int blockCount, int bytesPerBlock);
 int initFreeSpace(int blockCount, int bytesPerBlock);
 blockAllocation allocateBlocks (int required, int minPerExtent);
+
+
+
 
 #endif

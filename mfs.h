@@ -19,10 +19,11 @@
 #include <time.h>
 
 #include "b_io.h"
+#include "rootDir.h"
 
 #include <dirent.h>
-#define FT_REGFILE	DT_REG
-#define FT_DIRECTORY DT_DIR
+#define FT_REGFILE	   DT_REG
+#define FT_DIRECTORY   DT_DIR
 #define FT_LINK	DT_LNK
 
 #ifndef uint64_t
@@ -31,6 +32,22 @@ typedef u_int64_t uint64_t;
 #ifndef uint32_t
 typedef u_int32_t uint32_t;
 #endif
+
+
+
+typedef struct PathReturn{
+	DE* dir;
+	int statusCode;
+	int indexLast;
+}PathReturn;
+
+struct PathReturn parsePath (char* path);
+
+
+
+
+
+
 
 // This structure is returned by fs_readdir to provide the caller with information
 // about each file as it iterates through a directory
@@ -51,7 +68,8 @@ typedef struct
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
 	unsigned short  d_reclen;		/* length of this record */
 	unsigned short	dirEntryPosition;	/* which directory entry position, like file pos */
-	//DE *	directory;			/* Pointer to the loaded directory you want to iterate */
+	uint64_t dirStartLocation; 
+	DE *	directory;			/* Pointer to the loaded directory you want to iterate */
 	struct fs_diriteminfo * di;		/* Pointer to the structure you return from read */
 	} fdDir;
 
