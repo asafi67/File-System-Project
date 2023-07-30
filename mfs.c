@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "mfs.h"
 #include "volumeCB.h"
@@ -12,312 +13,983 @@
 #include "bitmap.h"
 #define BLOCK_SIZE 512
 
-char* cwdString = "/";
-DE* cwdPointer;
+// char* cwdString = "/";
+// DE* cwdPointer;
 
-PathReturn parsePath(char* path, DE* currentDir) {
-    PathReturn result;
-    result.dir = NULL;
-    result.statusCode = -1;
-    result.indexLast = -1;
+// // Helper function to split the path into individual directory names
+// static char** splitPath(const char* path, int* numComponents) {
+//     char** components = NULL;
+//     char* token;
+//     int count = 0;
 
-    if (currentDir == NULL || path == NULL || strlen(path) == 0) {
-        return result;
+//     // Count the number of components in the path
+//     char* pathCopy = strdup(path); // Create a copy of the path since strtok modifies the original string
+//     token = strtok(pathCopy, "/");
+//     while (token != NULL) {
+//         components = realloc(components, sizeof(char*) * (count + 1));
+//         components[count] = strdup(token);
+//         count++;
+//         token = strtok(NULL, "/");
+//     }
+//     free(pathCopy);
+
+//     *numComponents = count;
+//     return components;
+// }
+
+// PathReturn parsePath(const char* path, DE* currentDir) {
+//     PathReturn result;
+//     result.dir = currentDir;
+//     result.statusCode = 0;
+//     result.indexLast = 0;
+
+//     // Check if the path is absolute or relative
+//     int isAbsolute = (path[0] == '/');
+
+//     // Split the path into individual directory names
+//     int numComponents;
+//     char** components = splitPath(path, &numComponents);
+
+//     // Traverse the path components
+//     for (int i = 0; i < numComponents; i++) {
+//         DE* entry = NULL;
+//         int found = 0;
+
+//         // Handle "." (current directory)
+//         if (strcmp(components[i], ".") == 0) {
+//             entry = result.dir;
+//             found = 1;
+//         }
+//         // Handle ".." (parent directory)
+//         else if (strcmp(components[i], "..") == 0) {
+//             if (result.dir != NULL) {
+//                 entry = result.dir;
+//                 result.dir = (DE*) LBAread(entry->loc, 1, entry->size-1);
+//                 found = 1;
+//             }
+//         } else {
+//             // Look for the directory entry with the given name
+//             for (int j = 2; j < EXTENT_COUNT; j++) {
+//                 if (result.dir[j].isDirectory && strcmp(result.dir[j].name, components[i]) == 0) {
+//                     entry = &result.dir[j];
+//                     result.dir = (DE*) LBAread(entry->loc, 1, entry->size-1);
+//                     found = 1;
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (!found) {
+//             // The component was not found
+//             result.statusCode = -ENOENT; // No such file or directory
+//             result.indexLast = i;
+//             break;
+//         }
+//     }
+
+//     // Free the dynamically allocated memory for path components
+//     for (int i = 0; i < numComponents; i++) {
+//         free(components[i]);
+//     }
+//     free(components);
+
+//     return result;
+// }
+
+// int fs_mkdir(const char* pathname, mode_t mode) {
+//     // Parse the path to get the parent directory
+//     PathReturn parentResult = parsePath(pathname, cwdPointer);
+
+//     // Check if there was an error while parsing the path
+//     if (parentResult.statusCode != 0) {
+//         return parentResult.statusCode;
+//     }
+
+//     // Check if the parent directory already contains an entry with the same name
+//     for (int i = 2; i < EXTENT_COUNT; i++) {
+//         if (parentResult.dir[i].isDirectory && strcmp(parentResult.dir[i].name, pathname) == 0) {
+//             return -EEXIST; // Entry already exists
+//         }
+//     }
+
+//     // Find a free entry in the parent directory
+//     int freeIndex = -1;
+//     for (int i = 2; i < EXTENT_COUNT; i++) {
+//         if (parentResult.dir[i].size == 0) {
+//             freeIndex = i;
+//             break;
+//         }
+//     }
+
+//     if (freeIndex == -1) {
+//         return -ENOSPC; // No space left on device
+//     }
+
+//     // Initialize the new directory entry
+//     DE* newDir = (DE*)malloc(sizeof(DE));
+//     strcpy(newDir->name, pathname);
+//     newDir->size = sizeof(DE);
+//     newDir->loc = initDir(2, parentResult.dir); // Initialize the new directory with two entries (., ..)
+//     newDir->lastAccessedDate = time(NULL);
+//     newDir->createdAt = time(NULL);
+//     newDir->modifiedAt = time(NULL);
+//     newDir->isDirectory = 1;
+
+//     // Update the parent directory with the new entry
+//     parentResult.dir[freeIndex] = *newDir;
+
+//     // Write the updated parent directory back to disk
+//     LBAwrite(parentResult.dir, 1, parentResult.dir->loc);
+
+//     // Free the dynamically allocated memory
+//     free(newDir);
+
+//     return 0; // Success
+// }
+// int fs_rmdir(const char* pathname) {
+//     // Parse the path to get the parent directory
+//     PathReturn parentResult = parsePath(pathname, cwdPointer);
+
+//     // Check if there was an error while parsing the path
+//     if (parentResult.statusCode != 0) {
+//         return parentResult.statusCode;
+//     }
+
+//     // Find the directory entry to be removed
+//     int indexToRemove = -1;
+//     for (int i = 2; i < EXTENT_COUNT; i++) {
+//         if (parentResult.dir[i].isDirectory && strcmp(parentResult.dir[i].name, pathname) == 0) {
+//             indexToRemove = i;
+//             break;
+//         }
+//     }
+
+//     if (indexToRemove == -1) {
+//         return -ENOENT; // No such file or directory
+//     }
+
+//     // Check if the directory is not empty
+//     DE* dirToRemove = LBAread(parentResult.dir[indexToRemove].loc, parentResult.dir[indexToRemove].size, parentResult.dir[indexToRemove].size-1);
+//     for (int i = 2; i < EXTENT_COUNT; i++) {
+//         if (dirToRemove[i].size > 0) {
+//             return -ENOTEMPTY; // Directory not empty
+//         }
+//     }
+
+//     // Free the blocks allocated for the directory to be removed
+//     releaseBlocks(dirToRemove[0].loc, dirToRemove[0].size, dirToRemove[0].size-1);
+
+//     // Clear the directory entry in the parent directory
+//     memset(&parentResult.dir[indexToRemove], 0, sizeof(DE));
+
+//     // Write the updated parent directory back to disk
+//     LBAwrite(parentResult.dir, 1, parentResult.dir->loc);
+
+//     return 0; // Success
+// }
+	
+	//allocate memory for the extern cwdString
+	char* cwdString = "/";
+    DirectoryEntry* cwdPointer;
+// given a file path, returns whether the path is valid
+// to be valid, all directories to the right must be immediate children
+// of the directory immediaely to their left.
+
+// indicates through status
+// whether the path is valid or not
+// whether the last path exists
+// also returns a pointer to the second to last directoryEntry
+// if path is invalid (if status==0) DO NOT USE THE returned pointer
+// if status==1 path is valid and last part of path does NOT exist
+// if status==2 path is valid and last part of path DOES exist
+PatPasReturn ParsePath(char *path)
+{
+  
+    // printf("the path being parsed is: %s\n", path);
+    // wrapper struct to be returned
+    PatPasReturn ret;
+    ret.indexOfLastElement = 0;
+    // 2 cases:
+    // 1. path is an absolute path
+    // 2. path is a relative path
+    // determine which case we are in
+    DirectoryEntry *root = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1);
+    if(root==NULL){
+        printf("malloc failed in parsePath\n");
+        ret.status=-1;
+        return ret;
     }
-
-    // Copy the path into a temporary buffer for parsing
-    char tempPath[strlen(path) + 1];
-    strcpy(tempPath, path);
-
-    char* token = strtok(tempPath, "/");
-    DE* dir = currentDir;
-
-    // Tokenize the path and traverse the directories
-    while (token != NULL) {
-        // Find the current token (directory name) in the current directory
-        DE* foundDir = NULL;
-        for (int i = 0; dir[i].name[0] != '\0'; i++) {
-            if (strcmp(dir[i].name, token) == 0) {
-                foundDir = &dir[i];
+    int numBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize;
+    if (path[0] == '/')
+    {
+        // path is an absolute path so start at root
+        LBAread(root, numBlocks, vcb->rootIndex); 
+    }
+    else
+    {
+        // path is relative so start at cwd
+        LBAread(root, numBlocks, cwdPointer[0].location); //TODO: make sure te wcdPointer is actually initialized
+    }
+    ret.directory = root; // set the starting dir in our result struct
+    // get the first child dir.
+    char *currentToken = strtok(path, "/");
+    // found flag indicates if child directory was found in parent
+    int found;
+    while (currentToken != NULL)
+    {              // loop through the whole path DE by DE
+        found = 0; // haven't found the child DE yet
+        // look thorugh current directory for child
+        for (int i = 0; i < BUFFER_SIZE; ++i)
+        {
+            if (strcmp(ret.directory[i].name, currentToken) == 0)
+            {
+                // child was found and so far the path is valid
+                found = 1;
+                // setup to replace parent with found child
+                DirectoryEntry *nextDir = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1);
+                if(nextDir==NULL){    
+                    printf("malloc failed in parsepath function\n");
+                    ret.status=-1;
+                    return ret;
+                }
+                if (ret.directory[i].isDir == 0)
+                {
+                    // the current token is a file so path is invalid
+                    // if it is not the last token
+                    currentToken = strtok(NULL, "/");
+                    // check if the file is the last token
+                    if (currentToken == NULL)
+                    {
+                        // the file was the last token so path is valid
+                        // and the file exists
+                        ret.status = 2;
+                        ret.indexOfLastElement = i;
+                        return ret;
+                    }
+                    // file was NOT the last token so path is invalid
+                    ret.status = 0;
+                    return ret;
+                } // child is a valid directory in parent
+                // so set parent to child for next iteration
+                LBAread(nextDir, numBlocks, ret.directory[i].location);
+                ret.directory = nextDir;
+                ret.indexOfLastElement = i;
+                // since path was found go to next iteration
                 break;
             }
         }
-
-        // If the directory was not found, return with an error status
-        if (foundDir == NULL) {
-            result.statusCode = -1;
-            result.indexLast = -1;
-            return result;
+        if (found != 1)
+        {
+            // did not find child dir/file in current directory
+            // path is invalid if child dir/file is not last path
+            currentToken = strtok(NULL, "/");
+            // check if child is last DE in path
+            if (currentToken == NULL)
+            {
+                // current token was the last path
+                // so path IS valid
+                // the directory/file does NOT exist yet
+                ret.status = 1;
+                return ret;
+            }
+            // current token was not found
+            // and was not the last DE in path so path is invalid
+            ret.status = 0;
+            return ret;
         }
+        // move on to next token
+        currentToken = strtok(NULL, "/");
+    }
+    // every DE in the path is valid and exists
+    // so return the parent of the last entry
+    ret.status = 2;
+    // change to parent of last entry
+    
+    if(LBAread(ret.directory, numBlocks, ret.directory[1].location) != numBlocks){
+        printf("LBAread failed in parsePath \n");
+        ret.status = -10;
+    } 
+    return ret;
+}
 
-        // Update the current directory and token for the next iteration
-        dir = foundDir;
-        token = strtok(NULL, "/");
+// returns the current work directory that the user is in
+char *fs_getcwd(char *pathname, size_t size)
+{
+   // printf("This is the cwdString: %s", cwdString);
+    return cwdString;
+}
+// returns the canonical path of an absolute path
+char* getCanonicalPath(char *path)
+{
+    // will hold the canonical path
+    char newPath[1000] = {};
+    // for processing input path
+    char *stack[strlen(path)];
+    // for strtok_r
+    char *saveptr;
+    // keeps track of where we are in stack
+    int top = -1;
+
+    // fill stack with tokens from path
+    char *token = strtok_r(path, "/", &saveptr);
+
+    while (token != NULL)
+    {
+        if (strcmp(token, "..") == 0)
+        {
+            // if the stack isn't empty
+            if (top > -1)
+            {
+                // pop last element off
+                top--;
+            }
+        }
+        else if (strcmp(token, ".") == 0)
+        {
+            // ignore this case as . does nothing
+        }
+        else
+        {
+            // current token is an actual element
+            // so push it to the stack
+            stack[++top] = token;
+        }
+        // get next token
+        token = strtok_r(NULL, "/", &saveptr);
     }
 
-    // Path successfully parsed, set the result and return
-    result.dir = dir;
-    result.statusCode = 0;
-    result.indexLast = 0; // You can update this index based on your specific use case
+    // create string out of stack.
+    newPath[0] = '/';
+    for (int i = 0; i <= top; ++i)
+    { // loop through stack
+        // and add every element in the stack to the string
+        strcat(newPath, stack[i]);
+        // if we aren't at the final element
+        if (i != top)
+        {
 
+            // add a slash in between elements
+            strcat(newPath, "/");
+        }
+        // if we are at the final element
+        else
+        {
+
+            // add a null terminator
+            strcat(newPath, "\0");
+        }
+    }
+    // convert newPath to a char*
+    char *result = (char *) malloc(strlen(newPath) * sizeof(char) + 1);
+    strcpy(result, newPath);
+    
     return result;
 }
 
-int fs_mkdir(const char *pathname, mode_t mode) {
-    // Check if the directory already exists
-    if (fs_isDir(pathname)) {
-        // Directory already exists, return an error code
+// linux chdir
+int fs_setcwd(char *pathname)
+{
+    //since parsePath will mutate pathname
+    //create a copy of pathname
+    char* copyOfPath = malloc(strlen(pathname)+1);
+    strcpy(copyOfPath, pathname);
+    
+    PatPasReturn res;
+    res = ParsePath(pathname);
+     
+    if (res.status == -1)
+    {
+        printf("parsePath failed in fs_setcwd\n");
+        if(res.directory!=NULL)
+            free(res.directory);
+            res.directory = NULL;
+        free(copyOfPath);
         return -1;
     }
-
-    // Create a new directory entry in the parent directory
-    char parentPath[256];
-    char dirName[256];
-    int indexLast;
-    PathReturn parentPathReturn = parsePath(pathname, cwdPointer);
-    DE* parentDir = parentPathReturn.dir;
-
-    if (parentDir == NULL) {
-        // Parent directory not found, return an error code
+    if (res.status != 2 )
+    {
+        printf("Invalid path %s\n", pathname);
+        free(copyOfPath);
+        if(res.directory!=NULL)
+            free(res.directory);
+            res.directory = NULL;
         return -1;
     }
+    // if path points to file, command is invalid
+    if (res.directory[res.indexOfLastElement].isDir != 1)
+    {
+        // path points to file and command is invalid
+        printf("Path %s is invalid as it points to file \n", pathname);
+        free(copyOfPath);
+        if(res.directory!=NULL)
+            free(res.directory);
+            res.directory = NULL;
+        return -1;
+    }
+    // path is valid so change directory
 
-    // Get the name of the new directory
-    sscanf(pathname + parentPathReturn.indexLast + 1, "%s", dirName);
+    // case 1: pathname is relative
+    // case 2: pathname is absolute
+    if (copyOfPath[0] != '/')
+    {
+        // pathname is relative
+        // so concatenate the path to the cwdString
+        // create new string of proper size to hold everything
+        char newCwdString[strlen(cwdString) + 2 + strlen(copyOfPath)];
+        // copy old cwd into the first part of new string
+        strcpy(newCwdString, cwdString);
+        //concatenate a /
+        strcat(newCwdString, "/");   
+        // concatenate the relative new path
+        strcat(newCwdString, copyOfPath);
+        // convert resultant path to a canonical path
+        // set cwdString to new path
+        cwdString = getCanonicalPath(newCwdString);
+    }
+    else
+    {
+        printf("path is %s\n", copyOfPath);
+       
+        // path is absolute
+        // convert pathname to canonical path
+        //  set the cwdString to the new pathname
+        cwdString = getCanonicalPath(copyOfPath); // may need to free old cwdString
+    }
+    // free cwdPointer's old content
+   // free(cwdPointer); // might not be necessary and might need to be removed if cwdPointer was never malloced
+    // set cwdPointer
+    int cwdBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize;
+    if(LBAread(cwdPointer, cwdBlocks, res.directory[res.indexOfLastElement].location) != cwdBlocks){
+        printf("LBAread failed in delete \n");
+    }
+    free(copyOfPath);
+    if(res.directory != NULL)
+            free(res.directory);
+            res.directory = NULL;
+    return 0;
+}
+// creates new directory. returns 1 upon success -1 on failure.
+int fs_mkdir(const char *pathname, mode_t mode)
+{
+    // get started index of last elemnt in path
+    // Ex.:If path a home/Desktop/newFolder
+    // We need "newFolder"
+    char copy[strlen(pathname)];
+   
+    strcpy(copy, pathname);
+    int index = 0;
+    int indexParent;
+    for (int i = strlen(copy); i >= 0; i--)
+    {
+        if (copy[i] ==  '/')
+        {
+            index = ++i;
+            break;
+        }
+    }
+    
+    
+    PatPasReturn parent;
+    // call parse path
+    parent = ParsePath((char*) pathname);
+    // check the returned results of parsepath
+    if (parent.status != 1)
+    {
+        printf("The path you gave is invalid: %s\n", copy);
+        if (parent.status == 2)
+        {
+            printf("The directory: %s already exists\n", pathname + index);
+        }
+        if(parent.directory!=NULL)
+            free(parent.directory);
+            parent.directory = NULL;
+        return -1;
+    }
+    //get the name of the directory to be created from the path passed in
+    char newDirectoryName[strlen(copy) - index +1];
+    strncpy(newDirectoryName, copy + index, strlen(copy) - index+1);
+    //printf("inside md: new directory name: %s parent is: %s \n", newDirectoryName, parent.directory);
+    
+    if(strcmp(newDirectoryName, parent.directory[0].name) == 0){
+        //if the name of the dir to be created is the same as the parent
+        //then rudely deny the user's request to create the new dir
+        printf("You think you can create a directory named the same as the parent??\n");
+        printf("No. You can't-- directory %s not created\n", newDirectoryName);
+        return -1;
+    }
+    // check of there is space in the parent directory
+    for (int i = 2; i < BUFFER_SIZE; i++)
+    {
+        if (strlen(parent.directory[i].name) == 0)
+        {
+            //allocate the blocks needed for new dir on disk and update the bitmap
+            int newLocation = initDirectory(parent.directory, vcb->blockSize);
+            if(newLocation == -1){
+                printf("error occurred in initDirectory in mkDir function \n");
+                if(parent.directory!=NULL)
+            free(parent.directory);
+            parent.directory = NULL;
+                return -1;
+            }
+            DirectoryEntry newDirectory;
+            // Initialize new directory values
+            newDirectory.isDir = 1;
+            newDirectory.dateCreated = time(NULL);
+            newDirectory.dateLastAccessed = time(NULL);
+            newDirectory.dateLastModified = time(NULL);
+            newDirectory.location = newLocation;
+            //set name
+            strncpy(newDirectory.name, newDirectoryName, sizeof(newDirectory.name));
+            parent.directory[i] = newDirectory;
+            //write the updated parent to disk
+            int parentBlocks  = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize;
+            LBAwrite(parent.directory, parentBlocks, parent.directory->location); 
+            if(parent.directory!=NULL)
+            free(parent.directory);
+            parent.directory = NULL;
+            return 1;
+        }
+    }
+    // If we reach this point, then there is no space available for
+    // new directory
+    printf("Parent directory has no space for new directory\n");
+    if(parent.directory!=NULL)
+            free(parent.directory);
+            parent.directory = NULL;
+    return -1;
+}
+//if result is -1 path is invalid. If result is 1 then isDir if result is 0 then it is file.
+int fs_isDir(char *pathname)
+{
+    // call parsePath on the path
+    PatPasReturn result = ParsePath(pathname);
+    // analyze the returned value of parsePath
+    if (result.status == -1)
+    {
+        printf("ParsePath failed\n");
 
-    // Initialize the new directory
-    int newDirLoc = initDir(2, parentDir);
+        return -1;
+        if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+    }
+    else if (result.status < 2)
+    {
+        printf("Path is Invalid\n");
+         if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+        return -1;
+    }
+    // path is valid
+    // we have pointer to parent but we want actual element
+    // get actual element
+    // return whether the actual element is a directory
+    int res = result.directory[result.indexOfLastElement].isDir;
+     if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+    return res;
+}
+//if result is -1 path is invalid. If result is 1 then isFile if result is 0 then it is dir.
+int fs_isFile(char * filename){
+    int res =  fs_isDir(filename);
+    if(res <0){
+        return res;
+    }
+    return (res==1) ? 0 : 1;
 
-    // Set the directory entry information
-    strcpy(parentDir[parentDir[0].size / sizeof(DE)].name, dirName);
-    parentDir[parentDir[0].size / sizeof(DE)].size = 0;
-    parentDir[parentDir[0].size / sizeof(DE)].loc = newDirLoc;
-    parentDir[parentDir[0].size / sizeof(DE)].isDirectory = 1;
-
-    // Update the parent directory information
-    parentDir[0].size += sizeof(DE);
-
-    // Write the updated parent directory to disk
-    LBAwrite(parentDir, parentDir[0].size, parentPathReturn.dir->loc);
-
-    return 0; // Return success
 }
 
 
-int fs_rmdir(const char *pathname) {
-    // Check if the directory exists and is a valid directory
-    if (!fs_isDir(pathname)) {
-        // Directory not found or not a directory, return an error code
-        return -1;
-    }
 
-    PathReturn pathReturn = parsePath(pathname, cwdPointer);
-    DE* dir = pathReturn.dir;
-
-    // Check if the directory is empty (only contains . and .. entries)
-    if (dir[0].size > 2 * sizeof(DE)) {
-        // Directory is not empty, return an error code
-        return -1;
-    }
-
-    // Remove the directory entry from the parent directory
-    DE* parentDir = pathReturn.dir;
-    int entryIndex = pathReturn.indexLast;
-
-    // Shift the directory entries to remove the entry
-    for (int i = entryIndex; i < parentDir[0].size / sizeof(DE) - 1; i++) {
-        parentDir[i] = parentDir[i + 1];
-    }
-
-    // Update the parent directory information
-    parentDir[0].size -= sizeof(DE);
-
-    // Write the updated parent directory to disk
-    LBAwrite(parentDir, parentDir[0].size, parentDir->loc);
-
-    // Mark the directory's blocks as unallocated
-    releaseBlocks(dir->loc, dir->size, dir->size);
-
-    return 0; // Return success
-}
-
-
-fdDir * fs_opendir(const char *pathname) {
-    // Check if the directory exists and is a valid directory
-    if (!fs_isDir(pathname)) {
-        // Directory not found or not a directory, return NULL
+fdDir *fs_opendir(const char *pathname)
+{
+    
+    // call parsePath on the path
+    PatPasReturn result = ParsePath((char*) pathname);
+    // analyze the returned value of parsePath
+    if (result.status == -1)
+    {
+        printf("ParsePath failed\n");
+         if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
         return NULL;
     }
-
-    // Allocate memory for the fdDir structure
-    fdDir *dirp = (fdDir *)malloc(sizeof(fdDir));
-    if (dirp == NULL) {
-        // Memory allocation failed, return NULL
+    else if (result.status < 2)
+    {
+        printf("Path is Invalid\n");
+         if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
         return NULL;
     }
+    // path is valid
+    
+        struct fs_stat* stat = malloc(sizeof(struct fs_stat));
+        if(stat==NULL){
+            printf("malloc failed in fs_opendir. Did not open dir.\n");
+             if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+            return NULL;
+        }
+        fs_stat(pathname, stat);
+        fdDir* dir = malloc(sizeof(fdDir));
+        if(dir==NULL){
+            printf("error in malloc occurred in fs_opendir function\n");
+        }
+      
+        dir->d_reclen = stat->st_size;
+        dir->directoryStartLocation = result.directory[result.indexOfLastElement].location;
+        dir->dirEntryPosition = 0;
+        dir->directory = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1);
+        int numBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize - 1 ) / vcb->blockSize;
+        if (LBAread(dir->directory, numBlocks, dir->directoryStartLocation) != numBlocks)
+        {
+            printf("LBAread failed in opendir function\n");
+             if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+            return NULL;
+        }
+         if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+        return dir;
+    }
+    struct fs_diriteminfo *fs_readdir(fdDir * dirp)
+    {
+        // check if the arg is valid
+        if (dirp == NULL)
+        {
+            printf("the directory Item is not defined.\n");
+            return NULL;
+        }
+        if (dirp->dirEntryPosition > BUFFER_SIZE)
+        {
+            //reached end of directory.
+            return NULL;
+        }
+        // declare struct to be returned
+        struct fs_diriteminfo *result = malloc(sizeof(struct fs_diriteminfo));
+        // initialize the struct
+        result->d_reclen = sizeof(struct fs_diriteminfo);
+        // set the fileType. It could either be a dir or a file.
 
-    // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname, cwdPointer);
-    DE* dir = pathReturn.dir;
+        result->fileType = (dirp->directory[dirp->dirEntryPosition].isDir == 1) ? FT_DIRECTORY : FT_REGFILE;
+        // set the name of the directoryItem
+        strncpy(result->d_name, dirp->directory[dirp->dirEntryPosition].name, sizeof(result->d_name));
+        // since we just read the current dirItem, move to the next dirItem
+        int i = dirp->dirEntryPosition;
+        char* currName = dirp->directory[++dirp->dirEntryPosition].name;
+        while(strlen(currName) == 0 && (i < BUFFER_SIZE) ){
+            dirp->dirEntryPosition++;
+            i++;
+            currName = dirp->directory[dirp->dirEntryPosition].name;
+        }
+        
+        return result;
+    }
 
-    // Initialize the fdDir structure
-    dirp->d_reclen = sizeof(struct fs_diriteminfo);
-    dirp->dirEntryPosition = 0;
-    dirp->dirStartLocation = dir->loc;
-    dirp->directory = dir;
-    dirp->di = (struct fs_diriteminfo *)malloc(dirp->d_reclen);
-    if (dirp->di == NULL) {
-        // Memory allocation failed, free dirp and return NULL
+    int fs_closedir(fdDir * dirp)
+    {
+        // free the fsStat struct
+        free(dirp->directory); //TODO: if valgrind raises issues, create for loop to free every item in the array
+        dirp->directory = NULL;
+        // free the dirp instance
         free(dirp);
+        return 1;
+    }
+    // returns 1 upon success and 0 upon failure
+    // must be in the immediate parent of the file.
+    // if filename is valid then delete the file
+    int fs_delete(char *filename)
+    { // removes a file
+        //reload the cwdpointer
+        int blocksForcwd = (BUFFER_SIZE* sizeof(DirectoryEntry) + vcb->blockSize -1 ) / vcb->blockSize;
+        if(LBAread(cwdPointer, blocksForcwd, cwdPointer[0].location) != blocksForcwd){
+            puts("LBAread failed in fs_delete");
+            return 0;
+        }
+        // locate the file in the cwd
+        for (int i = 2; i < BUFFER_SIZE; ++i)
+        {
+            if (strcmp(cwdPointer[i].name, filename) == 0)
+            {
+                // file found so delete the file
+                // free the blocks by indicating which blocks are free via the bitmap
+                for(int currentExt=0; currentExt < 8; currentExt++){
+                    if(cwdPointer[i].extents[currentExt].count!=0)
+                        deallocateBlocks(cwdPointer[i].extents[currentExt].count, cwdPointer[i].extents[currentExt].blockNumber);
+                }
+                //deallocate the blocks for the  DE for the file as well
+                int fileDEBlocks = (sizeof(DirectoryEntry) + vcb->blockSize -1 ) / vcb->blockSize;
+               deallocateBlocks(fileDEBlocks, cwdPointer[i].location);
+    
+                // remove the file from the parent directory
+                // by changing its name to NULL
+                cwdPointer[i].name[0] = '\0';
+                //write the modified parent back to disk.
+                if(LBAwrite(cwdPointer, (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize, cwdPointer[0].location ) != 
+                (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize){
+                    printf("LBAwrite failed in fs_delete. File deallocated but still remains inside parent folder.\n");
+                    return -1;
+                }
+                // since deletion was successful…
+
+                return 1;
+            }
+        }
+        // if we reach this point in the function body, then file not found in parent
+        // and so we did NOT delete the file
+        printf("file: %s was not found in cwd: %s File was not deleted.\n", filename, cwdString);
+        return 0;
+    }
+    //remove a folder
+    //or a file?
+    int fs_rmdir(const char *pathname)
+    {
+        // parse the path
+        PatPasReturn result = ParsePath( (char*) pathname);
+        // if the last element in pathname does not exist or path is invalid
+        if (result.status != 2)
+        {
+             if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+            return -1;
+        }
+        DirectoryEntry *toBeRemoved = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize - 1);
+        if(toBeRemoved == NULL){
+            printf("malloc failed in rmdir\n");
+             if(result.directory!=NULL){
+                free(result.directory);
+                result.directory = NULL;
+             }
+            return -1;
+        }
+        int numBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize - 1)  / vcb->blockSize;
+        
+        LBAread(toBeRemoved, numBlocks, result.directory[result.indexOfLastElement].location);
+
+        if (result.directory[result.indexOfLastElement].isDir == 0)
+        {
+           fs_delete(result.directory[result.indexOfLastElement].name);
+        }
+
+        // path is legal. Check if folder is not empty
+        for (int i = 2; i < BUFFER_SIZE; ++i)
+        {
+            //if the name is not empty
+            if (strlen(toBeRemoved[i].name) != 0) 
+            {
+                // found child in directory
+                // so directory is NOT empty
+                printf("Directory is NOT empty... cannot remove directory\n");
+                 if(result.directory!=NULL){
+                    free(result.directory);
+                    result.directory = NULL;
+                 }
+                return -1;
+            }
+        }
+            // if reached this point, directory is empty
+            // so remove the directory
+            // update the freespace structure to reflect
+            //  that the removed directory’s blocks are now free
+            deallocateBlocks(numBlocks, result.directory[result.indexOfLastElement].location);
+            // delete the directory’s DE in the parent
+            //by setting the name to empty string
+            result.directory[result.indexOfLastElement].name[0] = '\0';
+            //write the updated parent to disk
+            if(LBAwrite(result.directory, numBlocks, result.directory->location) != numBlocks){
+                printf("LBAwrite failed in rmdir function\n");
+            }
+            if(result.directory!=NULL)
+            free(result.directory);
+            result.directory = NULL;
+            return 1; 
+}
+
+
+//returns 1 on success 0 on failure
+//populates buf with info on the path arg
+int fs_stat(const char *path, struct fs_stat *buf){
+            // parsePath to see if it is legal
+            // if the last element does NOT exist then path is illegal
+            // if path is invalid path is illegal
+            PatPasReturn ret = ParsePath( (char*) path);
+            if (ret.status != 2)
+            {
+                printf("path: %s is not valid. The buffer has NOT been populated\n", path);
+                 if(ret.directory!=NULL)
+                free(ret.directory);
+                ret.directory = NULL;
+                return 0;
+            }
+            // path is legal
+            
+           DirectoryEntry lastElement = ret.directory[ret.indexOfLastElement];
+            buf->st_size =(ret.directory[ret.indexOfLastElement].isDir == 1) ?
+             BUFFER_SIZE * sizeof(DirectoryEntry) + vcb->blockSize-1 : lastElement.size; //TODO: change third ternary operand so that it calcs the size of the file using extents.
+            //buf->st_size = lastElement.size;
+            buf->st_blksize = vcb->blockSize;
+            buf->st_blocks = (lastElement.size + vcb->blockSize - 1) / vcb->blockSize;
+            buf->st_accesstime = lastElement.dateLastAccessed ||  (time_t) 0;
+            buf->st_modtime = lastElement.dateLastModified ||  (time_t)0;
+            buf->st_createtime = lastElement.dateCreated ||  (time_t)0;
+             if(ret.directory!=NULL)
+            free(ret.directory);
+            ret.directory = NULL;
+            return 1;
+}
+
+
+//if dest exists then it must be a dir and then move src into dest
+//else rename src to dest
+//dest must either be a valid path to dest or a name  or a file
+//src must be a valid path and exist and it can either be a file or dir
+//returns 1 on success, -1 on failure
+int fs_mv(char* srcPath, char* destPath ){
+
+//check src for validity
+PatPasReturn srcResult = ParsePath(srcPath);
+//path is not valid or the element at the end does not exist
+if(srcResult.status != 2){
+	printf("invalid path given\n");
+     if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+	return -1;
+}
+ int numBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize;
+PatPasReturn destResult = ParsePath(destPath);
+//if path is valid but last element in dest does not exist 
+    
+	if(destResult.status == 1){
+        printf("changing name\n");
+	    int nameLen = sizeof(srcResult.directory[srcResult.indexOfLastElement].name);
+		//then rename the src to destPath	
+		strncpy(srcResult.directory[srcResult.indexOfLastElement].name, destPath, nameLen );
+	   
+	    if(LBAwrite(srcResult.directory, numBlocks, srcResult.directory[0].location) != numBlocks){
+	        printf("LBAwrite failed in mv function\n");
+             if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+	        return -1;
+        }
+         if(destResult.directory!=NULL)
+            free(destResult.directory);
+            destResult.directory = NULL;
+         if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+		return 1;
+}
+	if(destResult.status == 2){
+		//the dest does exist but is it a dir?
+		if(destResult.directory[destResult.indexOfLastElement].isDir != 1){
+			if(srcResult.directory[srcResult.indexOfLastElement].isDir ==1){
+			printf("cannot move a directory into a file.\n");
+             if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+			return -1;
+			}
+			//move file into file
+			//same as moving a dir
+
+            //change the DE in dest array to the src file DE 
+            destResult.directory[destResult.indexOfLastElement] = srcResult.directory[srcResult.indexOfLastElement];
+             //delete src in its original parent
+             srcResult.directory[srcResult.indexOfLastElement].name[0] = '\0';
+             //write the modified directory Arrays back to disk
+             if(LBAwrite(destResult.directory, numBlocks, destResult.directory[0].location) != numBlocks){
+                puts("LBAwrite failed in fs_mv");
+                return -1;
+             }
+              if(LBAwrite(srcResult.directory, numBlocks, srcResult.directory[0].location) != numBlocks){
+                puts("LBAwrite failed in fs_mv");
+                return -1;
+             }
+             return 1;
+             	
+}
+		//if we made it this far destPath is a valid path to a directory
+//grab the path to the src
+char* pathToSrc = getCanonicalPath(srcPath);
+//so move srcPath into destPath
+//load the destination directory array into mem from disk
+    DirectoryEntry* destinationDir = malloc( sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1 );
+    if( destinationDir == NULL ){
+        printf("malloc failed in fs_mv function\n");
+         if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+        return -1;
+    }
+
+	if(LBAread(destinationDir, numBlocks, destResult.directory[destResult.indexOfLastElement].location) != numBlocks){
+        printf("LBAread failed in fs_mv function\n");
+         if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+        return -1;
+    }
+    for(int i=2; i< BUFFER_SIZE; ++i){ 
+        if(strlen(destinationDir[i].name) == 0 ){
+            //found a free space for src DirectoryEntry
+            //copy src DirectoryEntry into the free space
+            printf("the name of the dir to move is: %s and it its isDir is: %d\n", srcResult.directory[srcResult.indexOfLastElement].name, srcResult.directory[srcResult.indexOfLastElement].isDir);
+            //move src into dest
+            destinationDir[i] = srcResult.directory[srcResult.indexOfLastElement];
+            //commit changed parent  to disk
+             if(LBAwrite(destinationDir, numBlocks, destinationDir[0].location) != numBlocks){
+                printf("error in LBAwrite in fs_mv function\n");
+                 if(srcResult.directory!=NULL){
+                    free(srcResult.directory);
+                    srcResult.directory = NULL;
+                 }
+                return -1;
+            }
+            //delete the src DirectoryEntry from the parent of the src directory
+            srcResult.directory[srcResult.indexOfLastElement].name[0] = '\0';
+            //write the modified directories to disk
+            if(LBAwrite(srcResult.directory, numBlocks, srcResult.directory[0].location) != numBlocks){
+                printf("error in LBAwrite in fs_mv function\n");
+                 if(srcResult.directory!=NULL){
+                    free(srcResult.directory);
+                    srcResult.directory = NULL;
+                }
+                return -1;
+            }
+            //free resources.
+             if(srcResult.directory!=NULL)
+            free(srcResult.directory);
+            srcResult.directory = NULL;
+            return 1;
+        }
+    }
+    //if we are here then there was no space left in the destination directory
+    printf("No space left in Destination Directory. Did not move source\n");
+    }
+	return -1;
+}
+//loads a directory array given the corresponding directory Entry. 
+DirectoryEntry* loadDir(DirectoryEntry toBeLoaded){
+    int numBlocks = (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize;
+    DirectoryEntry* ret = malloc(numBlocks);
+    if(ret==NULL){
+        puts("malloc failed in loadDir"); 
         return NULL;
-    }
-
-    return dirp; // Return the fdDir structure
-}
-struct fs_diriteminfo *fs_readdir(fdDir *dirp) {
-    // Check if the directory stream is NULL or at the end of the directory
-    if (dirp == NULL || dirp->dirEntryPosition >= dirp->directory[0].size / sizeof(DE)) {
-        return NULL; // Return NULL to indicate the end of the directory
-    }
-
-    // Get the current directory entry
-    DE* currentEntry = &(dirp->directory[dirp->dirEntryPosition]);
-
-    // Fill the fs_diriteminfo structure with the current entry information
-    dirp->di->d_reclen = sizeof(struct fs_diriteminfo);
-    dirp->di->fileType = (currentEntry->isDirectory) ? FT_DIRECTORY : FT_REGFILE;
-    strcpy(dirp->di->d_name, currentEntry->name);
-
-    // Move to the next directory entry
-    dirp->dirEntryPosition++;
-
-    return dirp->di; // Return the fs_diriteminfo structure
-}
-int fs_closedir(fdDir *dirp) {
-    // Check if the directory stream is NULL
-    if (dirp == NULL) {
-        return -1; // Return an error code
-    }
-
-    // Free the dynamically allocated memory
-    free(dirp->di);
-    free(dirp);
-
-    return 0; // Return success
-}
-
-
-char * fs_getcwd(char *pathname, size_t size) {
-    if (pathname == NULL || size == 0) {
-        return NULL; // Return NULL for invalid arguments
-    }
-
-    // Get the current directory entry
-    DE* currentDir = &(cwdPointer);
-
-    // Copy the current directory path to the provided buffer
-    strncpy(pathname, currentDir->name, size);
-
-    return pathname; // Return the buffer containing the current working directory path
-}
-
-
-int fs_setcwd(char *pathname) {
-    // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname, cwdPointer);
-    DE* dir = pathReturn.dir;
-
-    // Check if the directory exists and is a valid directory
-    if (dir == NULL || !dir->isDirectory) {
-        return -1; // Directory not found or not a valid directory, return an error code
-    }
-
-    // Update the current working directory location
-  
-  
-  cwdPointer = dir->loc;
-
-    return 0; // Return success
-}
-
-
-int fs_isFile(char *filename) {
-    // Parse the path and get the DE* for the file
-    PathReturn pathReturn = parsePath(filename, cwdPointer);
-    DE* file = pathReturn.dir;
-
-    // Check if the file exists and is a valid regular file
-    if (file == NULL || file->isDirectory) {
-        return 0; // File not found or not a valid regular file, return 0 (false)
-    }
-
-    return 1; // Return 1 (true) to indicate that the given path is a regular file
-}
-
-
-int fs_isDir(char *pathname) {
-    // Parse the path and get the DE* for the directory
-    PathReturn pathReturn = parsePath(pathname, cwdPointer);
-    DE* dir = pathReturn.dir;
-
-    // Check if the directory exists and is a valid directory
-    if (dir == NULL || !dir->isDirectory) {
-        return 0; // Directory not found or not a valid directory, return 0 (false)
-    }
-
-    return 1; // Return 1 (true) to indicate that the given path is a directory
-}
-int fs_delete(char* filename) {
-    // Parse the path and get the DE* for the file
-    PathReturn pathReturn = parsePath(filename, cwdPointer);
-    DE* file = pathReturn.dir;
-
-    // Check if the file exists and is a valid regular file
-    if (file == NULL || file->isDirectory) {
-        return -1; // File not found or not a valid regular file, return an error code
-    }
-
-    // Remove the file entry from the parent directory
-    DE* parentDir = pathReturn.dir;
-    int entryIndex = pathReturn.indexLast;
-
-    // Shift the directory entries to remove the entry
-    for (int i = entryIndex; i < parentDir[0].size / sizeof(DE) - 1; i++) {
-        parentDir[i] = parentDir[i + 1];
-    }
-
-    // Update the parent directory information
-    parentDir[0].size -= sizeof(DE);
-
-    // Write the updated parent directory to disk
-    LBAwrite(parentDir, parentDir[0].size, parentDir->loc);
-
-    // Mark the file's blocks as unallocated
-    releaseBlocks(file->loc, file->size, file->loc);
-
-    return 0; // Return success
-}
-
-
-int fs_stat(const char *path, struct fs_stat *buf) {
-    // Parse the path and get the DE* for the file/directory
-    PathReturn pathReturn = parsePath(path, cwdPointer);
-    DE* entry = pathReturn.dir;
-
-    // Check if the entry exists
-    if (entry == NULL) {
-        return -1; // Entry not found, return an error code
-    }
-
-    // Fill the fs_stat structure with the entry information
-    buf->st_size = entry->size;
-    buf->st_blksize = BLOCK_SIZE;
-    buf->st_blocks = (entry->size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    buf->st_accesstime = entry->lastAccessedDate;
-    buf->st_modtime = entry->modifiedAt;
-    buf->st_createtime = entry->createdAt;
-
-    // Add additional attributes here if needed for your file system
-
-    return 0; // Return success
+        }
+    if( LBAread(ret, numBlocks,  toBeLoaded.location) != numBlocks ){ 
+        puts("loadDir failed"); 
+        free(ret); 
+        return NULL;  } 
+        return ret;
+    
 }

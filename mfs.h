@@ -35,18 +35,78 @@ typedef u_int32_t uint32_t;
 
 
 
-typedef struct PathReturn{
-	DE* dir;
-	int statusCode;
-	int indexLast;
-}PathReturn;
+// typedef struct PathReturn{
+// 	DE* dir;
+// 	int statusCode;
+// 	int indexLast;
+// }PathReturn;
 
-PathReturn parsePath (char* path, DE* currentDir);
+// PathReturn parsePath (const char* path, DE* currentDir);
+
+// static char** splitPath(const char* path, int* numComponents);
 
 
 
 
 
+// // This structure is returned by fs_readdir to provide the caller with information
+// // about each file as it iterates through a directory
+// struct fs_diriteminfo
+// 	{
+//     unsigned short d_reclen;    /* length of this record */
+//     unsigned char fileType;    
+//     char d_name[256]; 			/* filename max filename is 255 characters */
+// 	};
+
+// // This is a private structure used only by fs_opendir, fs_readdir, and fs_closedir
+// // Think of this like a file descriptor but for a directory - one can only read
+// // from a directory.  This structure helps you (the file system) keep track of
+// // which directory entry you are currently processing so that everytime the caller
+// // calls the function readdir, you give the next entry in the directory
+// typedef struct
+// 	{
+// 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
+// 	unsigned short  d_reclen;		/* length of this record */
+// 	unsigned short	dirEntryPosition;	/* which directory entry position, like file pos */
+// 	uint64_t dirStartLocation; 
+// 	DE *	directory;			/* Pointer to the loaded directory you want to iterate */
+// 	struct fs_diriteminfo * di;		/* Pointer to the structure you return from read */
+// 	} fdDir;
+
+// // Key directory functions
+// int fs_mkdir(const char *pathname, mode_t mode);
+// int fs_rmdir(const char *pathname);
+
+// // Directory iteration functions
+// fdDir * fs_opendir(const char *pathname);
+// struct fs_diriteminfo *fs_readdir(fdDir *dirp);
+// int fs_closedir(fdDir *dirp);
+
+// // Misc directory functions
+// char * fs_getcwd(char *pathname, size_t size);
+// int fs_setcwd(char *pathname);   //linux chdir
+// int fs_isFile(char * filename);	//return 1 if file, 0 otherwise
+// int fs_isDir(char * pathname);		//return 1 if directory, 0 otherwise
+// int fs_delete(char* filename);	//removes a file
+
+
+// // This is the strucutre that is filled in from a call to fs_stat
+// struct fs_stat
+// 	{
+// 	off_t     st_size;    		/* total size, in bytes */
+// 	blksize_t st_blksize; 		/* blocksize for file system I/O */
+// 	blkcnt_t  st_blocks;  		/* number of 512B blocks allocated */
+// 	time_t    st_accesstime;   	/* time of last access */
+// 	time_t    st_modtime;   	/* time of last modification */
+// 	time_t    st_createtime;   	/* time of last status change */
+	
+// 	/* add additional attributes here for your file system */
+// 	};
+
+// int fs_stat(const char *path, struct fs_stat *buf);
+
+ extern DirectoryEntry* cwdPointer; 
+ extern char* cwdString;
 
 
 // This structure is returned by fs_readdir to provide the caller with information
@@ -63,15 +123,37 @@ struct fs_diriteminfo
 // from a directory.  This structure helps you (the file system) keep track of
 // which directory entry you are currently processing so that everytime the caller
 // calls the function readdir, you give the next entry in the directory
-typedef struct
+typedef struct fdDir
 	{
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
-	unsigned short  d_reclen;		/* length of this record */
-	unsigned short	dirEntryPosition;	/* which directory entry position, like file pos */
-	uint64_t dirStartLocation; 
-	DE *	directory;			/* Pointer to the loaded directory you want to iterate */
-	struct fs_diriteminfo * di;		/* Pointer to the structure you return from read */
+	unsigned short  d_reclen;		/*length of this record */
+	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
+	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
+	DirectoryEntry* directory;			//the directory array NEED to read it from disk upon initializationof the fdDir (in the open function)
 	} fdDir;
+
+//this struct packages the status code 
+//DE pointer as return value for parse path
+typedef struct PatPasReturn {
+	//this a pointer to a directory entry
+	//A/B/C in this case it would point to B
+	DirectoryEntry* directory;
+	//indicates the status of path passed 
+	//to parse path
+	int status;
+	//0 means path is invalid
+	//1 -> means path is valid 
+	//but last token doesn't exist
+	//2 -> path is valid and last token does exist
+	int indexOfLastElement;
+}PatPasReturn;
+
+//given a file path, returns whether the path is valid
+//indicates through status
+//whether the last token exists or not
+//also returns a pointer to th last directory
+//if path is invalid pointer equals null
+struct PatPasReturn ParsePath(char* path);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
@@ -85,7 +167,7 @@ int fs_closedir(fdDir *dirp);
 // Misc directory functions
 char * fs_getcwd(char *pathname, size_t size);
 int fs_setcwd(char *pathname);   //linux chdir
-int fs_isFile(char * filename);	//return 1 if file, 0 otherwise
+int fs_isFile(char * filename);	//return 1 if file, 0 otherwise ONLY IMPLEMENT isDir
 int fs_isDir(char * pathname);		//return 1 if directory, 0 otherwise
 int fs_delete(char* filename);	//removes a file
 
@@ -104,6 +186,11 @@ struct fs_stat
 	};
 
 int fs_stat(const char *path, struct fs_stat *buf);
+
+int fs_mv(char* srcPath, char* destPath );
+
+
+
 
 #endif
 

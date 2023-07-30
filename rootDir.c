@@ -11,58 +11,68 @@
 #include "rootDir.h"
 #include "mfs.h"
 
-#define BLOCK_SIZE 512
+
+unsigned char* bitmap;
+
+//returns first block of new dir on disk on success and -1 on failure
+int initDirectory(DirectoryEntry* parent, int blockSize){
+//number of bytes in bitmap
+int bitByteSize = ( vcb->numBlocks + 7) / 8; 
+// allocate mem for the new directory array
+DirectoryEntry* dir = malloc(BUFFER_SIZE * sizeof(DirectoryEntry) + blockSize-1);
+
+if(dir==NULL){
+    printf("malloc failed in initDirectory\n");
+    return -1;
+}
+// put "." and ".." directoryEntry instances into the buffer. at index 0 and 1 respectively.
+// initialize the "." DirectoryEntry to itself.
+
+//initialize all directory items to a known free state
+for (int i = 0; i < BUFFER_SIZE; i++){
+    //set the name of every directory item to NULL
+    dir[i].name[0] = '\0';
+}
+
+if(loadBitmap() == -1){
+    printf("loadBitmap function failed in initDirectory function \n");
+    return -1;
+}
+
+// allocate space on disk (via the bitmap's allocateBlocks function) and set blockNumber to the returned value.
+ int blockNumber = allocateBlocks(( BUFFER_SIZE * sizeof(DirectoryEntry) + blockSize-1) / blockSize , bitmap, bitByteSize);
+
+DirectoryEntry direc;
+//initialize directory
+direc.name[0] = '.';
+direc.name[1] = '\0';
+direc.size = BUFFER_SIZE * sizeof(DirectoryEntry) + blockSize-1;
+direc.location = blockNumber;
+direc.isDir = 1;
+dir[0] = direc;
+
+// If parent == NULL then initialize the ".." entry to pointer to itself. Else: initialize the ".." entry to parent.
+if(parent == NULL){
+    dir[1] = direc;
+    dir[1].name[0] = '.';
+    dir[1].name[1] = '.';
+    dir[1].name[2] = '\0';
+}
+else{
+    dir[1] = parent[0];
+    dir[1].name[0] = '.';
+    dir[1].name[1] = '.';
+    dir[1].name[2] = '\0'; 
+}
+
+int dirNumBlocks = (BUFFER_SIZE * sizeof(DirectoryEntry) + blockSize-1) / blockSize;
+// write the buffer to the disk at the block number. 
+
+if(LBAwrite(dir, dirNumBlocks, blockNumber) != dirNumBlocks){
+    printf("error occurred in LBAwrite in initDirectory function\n");
+    return -1;
+}
 
 
-int initDir(int minEntries, DE* parent) {
-    int minBytesNeeded = minEntries * sizeof(DE); // Calculate the minimum number of bytes needed to accommodate the specified number of directory entries
-    int blocksNeeded = (minBytesNeeded + BLOCK_SIZE - 1) / BLOCK_SIZE; // Calculate the number of blocks needed to store the directory entries, considering the block size
-    int bytesToAlloc = blocksNeeded * BLOCK_SIZE; // Calculate the total number of bytes to allocate for the directory
-    
-    int actualEntries = bytesToAlloc / sizeof(DE); // Calculate the actual number of directory entries that can fit in the allocated space
-    
-    DE* newDir = (DE*)malloc(bytesToAlloc); // Dynamically allocate memory for the directory entries
-
-    int i;
-    for (i = 2; i < actualEntries; i++) {
-        // Initialize each entry
-        strcpy(newDir[i].name, "File");  // Set a generic name for each file
-        newDir[i].size = 0;
-        newDir[i].loc = 0;
-        newDir[i].isDirectory = 1;
-    }
-
-    // Set "." entry
-    strcpy(newDir[0].name, ".");
-    newDir[0].size = actualEntries * sizeof(DE);
-    
-    blockAllocation ba = allocateBlocks(blocksNeeded, minEntries);
-
-     // Set lastAccessedDate, createdAt, and modifiedAt to the current time
-    time_t currentTime = time(NULL);
-    newDir[0].lastAccessedDate = currentTime;
-    newDir[0].createdAt = currentTime;
-    newDir[0].modifiedAt = currentTime;
-
-    // Set ".." entry
-    strcpy(newDir[1].name, "..");
-    if (parent == NULL) {
-        // If the current directory is the root, set ".." to itself
-        newDir[1].size = actualEntries * sizeof(DE);
-        newDir[1].loc = newDir[0].loc; // Set the location to the same as the current directory
-    } else {
-        // If the current directory has a valid parent, use its information for ".." entry
-        newDir[1].size = parent->size;
-        newDir[1].loc = parent->loc;
-    }
-
-    // Write the new directory to disk
-    LBAwrite(newDir, blocksNeeded, newDir[0].loc);
-
-    // Free the dynamically allocated memory when it's no longer needed
-    //free(newDir);
-
-    return newDir[0].loc;
-    
-    
+return blockNumber;
 }
