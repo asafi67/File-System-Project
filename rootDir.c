@@ -13,39 +13,34 @@
 
 
 unsigned char* bitmap;
-
-//returns first block of new dir on disk on success and -1 on failure
+// Function to initialize a new directory on the disk; 
+// returns the first block if successful or -1 if failed.
 int initDir(DE* parent, int blockSize){
+int bit_byte_size = ( vcb->num_blocks + 7) / 8; //calculate the number of bytes required
+DE* dir = malloc(BUFFER_SIZE * sizeof(DE) + blockSize-1); //memory allocation
 
-
-//number of bytes in bitmap
-int bit_byte_size = ( vcb->num_blocks + 7) / 8; 
-// allocate mem for the new directory array
-DE* directory = malloc(BUFFER_SIZE * sizeof(DE) + blockSize-1);
-
-if(directory==NULL){
-    printf("Failed to allocate memory within initDir\n");
+//check if memory allocation failed
+if(dir==NULL){
+    printf("Memory allocation failure in initDir\n");
     return -1;
 }
-// put "." and ".." directoryEntry instances into the buffer. at index 0 and 1 respectively.
-// initialize the "." DirectoryEntry to itself.
 
-//initialize all directory items to a known free state
+//loop and initalize each directory entry to a free state
 for (int i = 0; i < BUFFER_SIZE; i++){
-    //set the name of every directory item to NULL
-    directory[i].name[0] = '\0';
+    dir[i].name[0] = '\0';     //set the name of every directory item to empty string (free)
 }
 
+// Load the bitmap, return failure if unable to do so.
 if(loadBitmap() == -1){
-    printf("Failed to load the bitmap within initDir \n");
+    printf("Bitmap loading failure in initDir\n");
     return -1;
 }
 
-// allocate space on disk (via the bitmap's allocateBlocks function) and set blockNumber to the returned value.
- int block_number = allocateBlocks(( BUFFER_SIZE * sizeof(DE) + blockSize-1) / blockSize , bitmap, bit_byte_size);
+// Request space on disk using the bitmap's allocateBlocks function.
+int block_number = allocateBlocks(( BUFFER_SIZE * sizeof(DE) + blockSize-1) / blockSize , bitmap, bit_byte_size);
 
+//congigure the current directory entry, '.'
 DE direc;
-//initialize directory
 direc.name[0] = '.';
 direc.name[1] = '\0';
 direc.size = BUFFER_SIZE * sizeof(DE) + blockSize-1;
@@ -53,7 +48,8 @@ direc.loc = block_number;
 direc.isDirectory = 1;
 directory[0] = direc;
 
-// If parent == NULL then initialize the ".." entry to pointer to itself. Else: initialize the ".." entry to parent.
+
+//check wheter there is a parent directory if not, set '..' to point to iteslf
 if(parent == NULL){
     directory[1] = direc;
     directory[1].name[0] = '.';
@@ -61,20 +57,21 @@ if(parent == NULL){
     directory[1].name[2] = '\0';
 }
 else{
-    directory[1] = parent[0];
-    directory[1].name[0] = '.';
-    directory[1].name[1] = '.';
-    directory[1].name[2] = '\0'; 
+    //else set '..' to point to the parent directory
+    dir[1] = parent[0];
+    dir[1].name[0] = '.';
+    dir[1].name[1] = '.';
+    dir[1].name[2] = '\0'; 
 }
 
 int dirNumBlocks = (BUFFER_SIZE * sizeof(DE) + blockSize-1) / blockSize;
 
-//At the block number, we will write the buffer to disk
-if(LBAwrite(directory, dirNumBlocks, block_number) != dirNumBlocks){
+//write the directory entries to disk at the specified block number
+if(LBAwrite(dir, dirNumBlocks, block_number) != dirNumBlocks){
     printf("Failed to perform LBAwrite within initDir\n");
     return -1;
 }
 
-
+//return the block number of the new directory
 return block_number;
 }
