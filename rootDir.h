@@ -1,6 +1,6 @@
 #ifndef ROOTDIR_H_
 #define ROOTDIR_H_
-#define EXTENT_COUNT 8
+#define EXTENT_COUNT 10
 #define BUFFER_SIZE 50
 #include <time.h>
 
