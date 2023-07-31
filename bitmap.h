@@ -1,16 +1,29 @@
-#ifndef _BIT_MAP_H
-#define _BIT_MAP_H
+#ifndef BITMAP_H
+#define BITMAP_H
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <string.h>
+#include "volumeCB.h"
+#include "fsLow.h"
 
+//configuration constants, manually modify
+#define BITMAP_POSITION 1 
+#define BITS_PER_BYTE 8
 
+extern unsigned char* bitmap; //define a bitmap of char strings
+extern int blockSize; // declare variable for blocksize
 
-extern unsigned char * bitmap;
-extern int bitmapBlockSize;
-int bitmapInit(int totalBlocks, int blockSize);
-int allocateBlocks(int numBlocksToAllocate, unsigned char* bitmap, int bitmapSize);
-void deallocateBlocks(int numBlocksToFree, int startingPos);
-//loads the bitmap into memory if NOEXISTS returns 1 on success -1 on failure
-int loadBitmap();
+// Function prototypes
+int bitmapInit(int numBlocks, int blockSize);
+char *byteToBinaryString(unsigned char inputByte);
+unsigned char generateBitMask(int position);
+int checkBitStatus(int bitPosition, char charToTest);
+int findFreeBitIndex(int blocksNeeded, unsigned char* bitmapArray, int bitmapSize);
+int allocateBlocks(int blocksRequired, unsigned char* bitmapArray, int bitmapSize);
+void releaseBlocks(int blocksToRelease, int initialPosition);
+int loadBitmap(void);
 
-
-#endif
+#endif // BITMAP_H

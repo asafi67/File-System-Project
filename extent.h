@@ -4,6 +4,7 @@
 
 
 typedef struct {
+
     //number of contiguous blocks in extent
     int contiguous_blocks;
     //the location of the first block of the extent on disk
@@ -12,5 +13,6 @@ typedef struct {
     int block_number;
 
 }extent;
+
 
 #endif
