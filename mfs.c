@@ -556,11 +556,11 @@ int fs_delete(char *filename)
             for (int currentExt = 0; currentExt < 8; currentExt++)
             {
                 if (cwdPointer[i].extents[currentExt].contiguous_blocks != 0)
-                    deallocateBlocks(cwdPointer[i].extents[currentExt].contiguous_blocks, cwdPointer[i].extents[currentExt].block_number);
+                    releaseBlocks(cwdPointer[i].extents[currentExt].contiguous_blocks, cwdPointer[i].extents[currentExt].block_number);
             }
             // deallocate the blocks for the  DE for the file as well
             int fileDEBlocks = (sizeof(DE) + vcb->block_size - 1) / vcb->block_size;
-            deallocateBlocks(fileDEBlocks, cwdPointer[i].loc);
+            releaseBlocks(fileDEBlocks, cwdPointer[i].loc);
 
             // remove the file from the parent directory
             // by changing its name to NULL
@@ -637,7 +637,7 @@ int fs_rmdir(const char *pathname)
     // so remove the directory
     // update the freespace structure to reflect
     //  that the removed directory’s blocks are now free
-    deallocateBlocks(numBlocks, result.direc[result.index_last].loc);
+    releaseBlocks(numBlocks, result.direc[result.index_last].loc);
     // delete the directory’s DE in the parent
     // by setting the name to empty string
     result.direc[result.index_last].name[0] = '\0';

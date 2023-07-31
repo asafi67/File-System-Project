@@ -33,13 +33,13 @@
 //maximum number of chars for a file path in our fs
 #define MAX_PATH_LEN 400
 //declaring vcb
-VCB* vcb;
+VolumeControlBlock* vcb;
 //declare a bitmap blocksize
 int bitmapBlockSize;
 //declare bitmap
 unsigned char* bitmap;
 //returns -1 on failure 0 on success
-DirectoryEntry* cwdPointer;
+DE* currentDirectoryPointer;
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	
@@ -56,22 +56,22 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 	
 	//check that the magicNumber is a match
-	if(vcb->magicNumber != MAGIC_NUMBER){ //the fs has not been initialized yet 
+	if(vcb->magic_number != MAGIC_NUMBER){ //the fs has not been initialized yet 
 		//so initialize it
 		printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 		
 		//initialize the vcb
-		vcb->magicNumber = MAGIC_NUMBER;
-		vcb->blockSize = blockSize;
+		vcb->magic_number = MAGIC_NUMBER;
+		vcb->block_size = blockSize;
 		vcb->freeBlockCount = numberOfBlocks;
 		//initialize the freespace management
 		int indexOfBitmap = bitmapInit(numberOfBlocks, blockSize);
 		//initialize the rootDirectory
-		int indexOfRoot = initDirectory(NULL, blockSize);
+		int indexOfRoot = initDir(NULL, blockSize);
 		//initalize the rest of the vcb
-		vcb->bitmapIndex = indexOfBitmap;
-		vcb->rootIndex = indexOfRoot;
-		vcb->numBlocks = numberOfBlocks;
+		vcb->bitmap_index = indexOfBitmap;
+		vcb->root_index = indexOfRoot;
+		vcb->num_blocks = numberOfBlocks;
 		
 		//write VCB to disc
 		if(LBAwrite(vcb, 1, 0) != 1){
@@ -85,17 +85,17 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 	
 	// Allocate memory for the external current directory pointer
-    currentDirectoryPointer = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE +
-	 vcb->blockSize - 1);
+    currentDirectoryPointer = malloc(sizeof(DE) * BUFFER_SIZE +
+	 vcb->block_size - 1);
     if (currentDirectoryPointer == NULL) {
         printf("Memory allocation failed in fsInit!\n");
         return -1;
     }
 
 	// Define the external current directory pointer to start at the root directory array
-    LBAread(currentDirectoryPointer, (sizeof(DirectoryEntry) * BUFFER_SIZE +
-	 vcb->blockSize - 1) 
-	/ vcb->blockSize, vcb->rootIndex);
+    LBAread(currentDirectoryPointer, (sizeof(DE) * BUFFER_SIZE +
+	 vcb->block_size - 1) 
+	/ vcb->block_size, vcb->root_index);
 
 	return 0;
 }

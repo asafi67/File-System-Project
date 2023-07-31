@@ -163,11 +163,11 @@ int loadBitmap(){
     if(bitmap==NULL){
         
         // Calculate the size of the bitmap in bytes
-        int bitmapByteSize = (((vcb->numBlocks + 7) / 8) + (vcb->blockSize - 1))
-        / vcb->blockSize;
+        int bitmapByteSize = (((vcb->num_blocks + 7) / 8) + (vcb->block_size - 1))
+        / vcb->block_size;
 
         // If the bitmap is not in memory, allocate space for it
-        bitmap= malloc(bitmapByteSize + vcb->blockSize - 1);
+        bitmap= malloc(bitmapByteSize + vcb->block_size - 1);
         
         // Check if memory allocation failed
         if(bitmap==NULL){
@@ -175,10 +175,10 @@ int loadBitmap(){
             return -1;
         }
         // Calculate the number of blocks needed to hold the bitmap
-        int numberOfBitmapBlocks = (bitmapByteSize + vcb->blockSize - 1) / vcb->blockSize;
+        int numberOfBitmapBlocks = (bitmapByteSize + vcb->block_size - 1) / vcb->block_size;
 
         // Read the bitmap from the disk into memory
-        if (LBAread(bitmap, numberOfBitmapBlocks, vcb->bitmapIndex) != numberOfBitmapBlocks) {
+        if (LBAread(bitmap, numberOfBitmapBlocks, vcb->bitmap_index) != numberOfBitmapBlocks) {
             printf("Disk read failed to load bitmap into memory\n");
             return -1;
         } 
