@@ -8,33 +8,32 @@
 
 
 
-typedef struct DirectoryEntry{
-//TODO: copy all of the fields we submitted for our first group project in here
-    /* name of the entry, limit to 20 characters */
-    char name[20];
-    /* size of the entry in bytes, 10mb limit */
-    unsigned long int size;
-    /* location of the entry corresponds to sector number */
-    int location;
-    /* all date ints are stored like mmddyyyy */
-    /* the last time the file was accessed */
-    time_t dateLastAccessed;
-    /* the date of creation of the file */
-    time_t dateCreated;
-    /* last time the file was modified */
-    time_t dateLastModified;
-    /* file extension/type */
-    unsigned char fileType;
-    //extent array that can hold a max of 8 extents
-    Extent extents[EXTENT_COUNT];
-    //if directory entry points to folder
-    //isDir = 1
-    //if directory entry points to file
-    //isDir = 0
-    int isDir;
-} DirectoryEntry;
+typedef struct DE{
 
-int initDirectory(DirectoryEntry* parent, int blockSize);
+    //this character array will store the name of an entry
+    //entry name is limited to 20 characters
+    char name[20];
+    //size of an entry will be stored as a long
+    //limited to 10mb
+    unsigned long int size;
+    //location of an entry is stored as an int
+    int loc;
+    //variable to note when entry was last accessed
+    time_t last_accessed;
+    //variable to note when entry was created
+    time_t created_at;
+    //variable to note when an entry was last modified
+    time_t modified_at;
+    //we use a char to note type of a file
+     char file_type;
+    //an array of extents which will have up to 8 extents
+    extent extents[EXTENT_COUNT];
+    //if directory entry points to folder then isDirectory = 1
+    //if directory entry points to file then isDirectory = 0
+    int isDirectory;
+} DE;
+
+int initDir(DE* parent, int blockSize);
 
 
 #endif

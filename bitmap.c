@@ -189,15 +189,15 @@ int loadBitmap(){
     //check if bitmap is in memory first
 if(bitmap==NULL){
     //number of bytes that the bitmap is
-     int bitByteSize = ( ( ( vcb->numBlocks + 7/8) / 8 ) + (vcb->blockSize -1) / vcb->blockSize)  / vcb->blockSize;
+     int bitByteSize = ( ( ( vcb->num_blocks + 7/8) / 8 ) + (vcb->block_size -1) / vcb->block_size)  / vcb->block_size;
     //bitmap is not yet in memory so load it 
-    bitmap = malloc(bitByteSize + vcb->blockSize-1);
+    bitmap = malloc(bitByteSize + vcb->block_size-1);
     if(bitmap==NULL){
         printf("malloc failed for bitmap in loadBitmap function\n");
         return -1;
     }
-    int bitmapBlocks = (bitByteSize + vcb->blockSize - 1) / vcb->blockSize;
-    if(LBAread(bitmap, bitmapBlocks, vcb->bitmapIndex) != bitmapBlocks){
+    int bitmapBlocks = (bitByteSize + vcb->block_size - 1) / vcb->block_size;
+    if(LBAread(bitmap, bitmapBlocks, vcb->bitmap_index) != bitmapBlocks){
         printf("LBAread failed to load bitmap from disk\n");
         return -1;
     }

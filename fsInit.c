@@ -28,25 +28,26 @@
 
 
 
-//signature of file system checked to see if fs is mounted
+//we define a signature for the fs to be used for checking if it is mounted
 #define MAGIC_NUMBER 415001    //ameen set this
-//maximum number of chars for a file path in our fs
+//max character count for any path in our fs
 #define MAX_PATH_LEN 400
-//declaring vcb
-VCB* vcb;
-//declare a bitmap blocksize
-int bitmapBlockSize;
+//we declare a volume control block
+VolumeControlBlock* vcb;
+//declare a block size for bitmap
+int bitmap_block_size;
 //declare bitmap
 unsigned char* bitmap;
 //returns -1 on failure 0 on success
-DirectoryEntry* cwdPointer;
+//This pointer denotes a current working directory
+DE* cwdPointer;
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	
-	//pull in the VCB from disc 
+	//extract the vcb from disk
 	vcb = malloc( blockSize );
 	if(vcb == NULL){
-		printf("malloc for VCB failed");
+		printf("Memory allocation failed for VCB");
 		return -1;
 	}
 	if(LBAread(vcb, 1, 0) != 1){
@@ -54,27 +55,32 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		return -1;
 	}
 	
-	//check that the magicNumber is a match
-	if(vcb->magicNumber != MAGIC_NUMBER){ //the fs has not been initialized yet 
-		//so initialize it
+	//check that the vcb's magic# field matches the #define magic#
+    //to determine if the vcb has been initialized or not
+	//this 1st condition would indicate fs has not been initialized yet 
+    if(vcb->magic_number != MAGIC_NUMBER){ 
+		//We then initialize it in this case
 		printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 		
-		//initialize the vcb
-		vcb->magicNumber = MAGIC_NUMBER;
-		vcb->blockSize = blockSize;
+		//Initialize the vcb
+		vcb->magic_number = MAGIC_NUMBER;
+		vcb->block_size = blockSize;
 		vcb->freeBlockCount = numberOfBlocks;
-		//initialize the freespace management
+		
+        //Initialize the freespace management using bitmap function
 		int indexOfBitmap = bitmapInit(numberOfBlocks, blockSize);
-		//initialize the rootDirectory
-		int indexOfRoot = initDirectory(NULL, blockSize);
-		//initalize the rest of the vcb
-		vcb->bitmapIndex = indexOfBitmap;
-		vcb->rootIndex = indexOfRoot;
-		vcb->numBlocks = numberOfBlocks;
+		
+        //Initialize the root directory 
+		int indexOfRoot = initDir(NULL, blockSize);
+		
+        //Tnitalize the remaining parts of the vcb
+		vcb->bitmap_index = indexOfBitmap;
+		vcb->root_index = indexOfRoot;
+		vcb->num_blocks = numberOfBlocks;
 		
 		//write the volume control block to disc
 		if(LBAwrite(vcb, 1, 0) != 1){
-			printf("error occurred writing vcb to disk in fs_init.\n");
+			printf("Unable to write the vcb onto disc\n");
 			return -1;
 		}
 		
@@ -85,14 +91,14 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		
 		printf("File system is already initialized\n");
 	}
-		//allocate memory for the extern cwdPointer
-	cwdPointer = malloc(sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1);
+		//We have to allocate memory for the cwdPointer extern
+	cwdPointer = malloc(sizeof(DE) * BUFFER_SIZE + vcb->block_size -1);
 	if(cwdPointer==NULL){
-		printf("malloc failed in fsInit!\n");
+		printf("Unable to allocate memory in fsInit!\n");
 		return -1;
 	}
-	//define the extern cwdPointer to start pointing at the root directory array
-	LBAread(cwdPointer, (sizeof(DirectoryEntry) * BUFFER_SIZE + vcb->blockSize -1) / vcb->blockSize, vcb->rootIndex );
+	//Assign the root directory array to the extern pointer as the thing it points to
+	LBAread(cwdPointer, (sizeof(DE) * BUFFER_SIZE + vcb->block_size -1) / vcb->block_size, vcb->root_index );
 
 	return 0;
 	}
