@@ -10,197 +10,264 @@
 #include "fsLow.h"
 
 
+//configuration constants, manually modify
+#define BITMAP_POSITION 1 
+#define BITS_PER_BYTE 8
 
-#define BITMAP_LOCATION 1
-//defined to build .o, please chnage
-#define CHAR_BIT 1
-//declare a bitmap blocksize
-int bitmapBlockSize;
-//declare bitmap
-unsigned char* bitmap;
+unsigned char* bitmap; //define a bitmap of char strings
+int blockSize; // declare variable for blocksize
 
-//returns the address of the bitmap
-int bitmapInit(int totalBlocks, int blockSize){    //totalBlocks is the total number of blocks for the file system.  
-
-// Initialize the Free Space
-// a. Let’s assume you are using a bitmap for your free space management. Given the 
-// default size, you will have 19,531 blocks – so you need 19,531 bits or 2,442 bytes 
-// or 5 blocks (so from this alone you can see that the free space map is NOT part of 
-// the VCB, but rather the VCB would have the block number where your free space 
-// starts).
-  int numBytes = ( ( totalBlocks + 7) / 8 );    
-  int numBlocks = (numBytes + blockSize -1)  / blockSize;
-  bitmapBlockSize = numBlocks;
-// b. Before you can initialize the bits, you must have the memory to do so. So malloc 
-// the space needed. In this example 5 * blockSize
-//calloc sets all elements to 0.
-   bitmap =  calloc((numBlocks * blockSize), sizeof(unsigned char));
-  if(bitmap == NULL){
-    printf("ERROR occurred in malloc for bitmap in bitmap_init function\n");
-    return -1;
-  }
-
-//set the first bit to a 1 for the VCB
-//set numBlocks bits to 1 for bitmap starting at BITMAP_LOCATION
-int res = allocateBlocks((1+numBlocks), bitmap, (numBlocks*blockSize)); //1 for the vcb + numBlocks for the bitmap as first arg. numBlocks*blockSize for bitmapSize
-if(res == -1){
-  printf("failed to find free space for the VCB and the bitmap.\n");
-  printf("numb blocks = %d\n",numBlocks);
-  return -1;
-}
-// d. Now write that to disk with LBAwrite(theFreeSpaceMap, 5, 1) – that is write 5 
-LBAwrite(bitmap, numBlocks, BITMAP_LOCATION);
-//TODO: check what the return value means for LBAwrite and error handle it
-printf("size of bitmap in blocks: %d\n", numBlocks);
-return BITMAP_LOCATION; 
-}
-
-
-char *charToBinary ( unsigned char c )
-{
-    static char binary[CHAR_BIT + 1] = {0};
-    int i;
-    for( i = CHAR_BIT - 1; i >= 0; i-- )
-    {
-        binary[i] = (c % 2) + '0';
-        c /= 2;
+// returns the address of the bitmap 
+// accepts the # of total blocks and the block size
+int bitmapInit(int numBlocks, int blockSize){   
+    
+    // Initialize the Free Space
+    int bytesRequired = (( numBlocks + 7) / 8 );    
+    int blocksRequired = (bytesRequired + blockSize -1)  / blockSize;
+    blockSize = blocksRequired;
+   
+    // Before actually initializng the bits, we must allocate the necessary
+    // memory, utilizing calloc, calloc sets all elements to 0.
+    bitmap =  calloc((blocksRequired * blockSize), sizeof(unsigned char));
+    
+    //error check, check if bitmap failed to initalize
+    if(bitmap == NULL){
+        printf("failed to allocate memory for the bitmap in the bitmapInit function \n");
+        return -1;
     }
-   return binary;
+
+    // mark the first bit for the Volume Control Block
+    // mark bits for bitmap starting at the defined variable BITMAP_POSITION
+    int allocationStatus = allocateBlocks((1+blocksRequired), bitmap, 
+    (blocksRequired*blockSize));
+    
+    // Check if the allocation was successful. 
+    // A return value of -1 indicates failure.
+    if(allocationStatus == -1){
+        printf("Unable to locate free space for the VCB and bitmap\n");
+        printf("Number of blocks = %d\n",blocksRequired);
+        return -1;
+    }
+   
+    // Write the allocated bitmap to disk at the specified position using LBAwrite.
+    LBAwrite(bitmap, blocksRequired, BITMAP_POSITION);
+    
+    //Print the size of the bitmap in blocks to the console
+    printf("Size of bitmap in blocks: %d\n", blocksRequired);
+    
+    // Return the position where the bitmap was written
+    return BITMAP_POSITION; 
 }
 
-unsigned char createMask(int x){ //returns a char bitmask representation of the input int
- unsigned char mask = 1;   //TODO check if this works for deallocateBlocks too. might need to set mask to 0 sometimes.
-    mask = mask << x;
- return mask;
+//Function in order to convert an unsigned char (byte) to its binary string
+char *byteToBinaryString ( unsigned char inputByte){
+    
+    // Initalize static array to hold binary representation; 
+    // +1 for null terminator, initialized to zeros
+    static char binaryString[BITS_PER_BYTE + 1] = {0};
+    
+    // Variable for position within the binary representation array
+    int position;
+    
+    // Loop through the bits of the byte, starting from the most significant bit
+    // and ending with the least significant bit
+    for( position = BITS_PER_BYTE- 1; position >= 0; position-- ){
+       
+        // Determine the current bit (0 or 1) and convert to character '0' or '1'
+        binaryString[position] = (inputByte % 2) + '0';
+        // Right-shift the bits of the input byte by 1 (divide by 2) to process the next bit
+        inputByte /= 2; 
+    }
+
+    //retrun the binary string representation of the input byte
+    return binaryString;
 }
 
-int isDigitFree(int digit, char test){ //from right to left so if you want to check leftmost bit you input 7 and if you want the rightmost bit you do 0
- unsigned char mask = createMask(7-digit); 
- int result = 0; 
- if((mask & test) == mask){
-  result = 1;   
- }
-    return result;
-} //returns 1 if it is not free and 0 if it is free
+// Function to create a bitmask for a given postion
+// 'position' specifies the bit position within the byte
+unsigned char generateBitMask(int position){ 
+    //start with a mask of 00000001
+    unsigned char bitMask = 1;   
+    //Shift the '1' to the specified position within the byte
+    bitMask = bitMask << position;
+    //return the new bitMask
+    return bitMask;
+}
 
+// Function to check if a specific bit is set within a character
+// 'bitPosition' ranges from 0 (rightmost) to 7 (leftmost)
+int checkBitStatus(int bitPosition, char charToTest){ 
 
-//bitmapSize is the number of bytes allocated for bitmap third param is in bytes
-int getStartIndex(int numBlocksToAllocate, unsigned char* bitmap, int bitmapSize){ //returns the index of the bit not byte 
- //1 find the first zero in bitmap  
-//2. check next numBlocksToAllocate amount of bits
-//if a 1 is found then start over at step 1 at the bit after the one 
-    int startBit; //to be returned 
-    int endBit;  
-    int currBit;
-    for(currBit =0; currBit < bitmapSize*8; currBit++){
-        int byte = currBit / 8; //the byte in the bitmap that we are in      
-        int offset = currBit % 8;  //the bit in the byte that we are in
-        if(isDigitFree(offset, bitmap[byte]) == 0){ //if it is free
-            startBit = currBit; 
-             endBit = currBit + numBlocksToAllocate; 
-             //this for loop is probably unnecessary
-            for(; currBit < endBit; currBit++){ //check numBlocksToAllocate number of contiguous bits from currBit 
-                 byte = currBit / 8;
-                offset = currBit % 8;
-                 if(isDigitFree(offset, bitmap[byte]) == 1){ //if it is not free  
-                    break;
+    // Create a mask for the specified bit position
+    unsigned char mask = generateBitMask(7 - bitPosition);
+    // Initialize variable to track if bit is set
+    int isBitSet = 0;
+    //check if the bit is set at the specified position
+    if((mask & charToTest) == mask) {
+        isBitSet = 1; // If the bit is set, update 'isBitSet' to 1
+    }
+    //Return 1 is the bit is set, 0 if not
+    return isBitSet;
+}
+
+// Function to find a contiguous block of free bits within a bitmap
+// 'blocksNeeded' is the number of contiguous free bits required
+// 'bitmapArray' is the pointer to the bitmap
+// 'bitmapSize' is the size of the bitmap in bytes
+int findFreeBitIndex(int blocksNeeded, unsigned char* bitmapArray, int bitmapSize){ //returns the index of the bit not byte 
+    
+    int firstFreeBit; 
+    int lastFreeBit;  
+    int currentBit;
+    
+    //Loop to iterate through all the bits in the bitmap
+    for(currentBit = 0; currentBit < bitmapSize * 8; currentBit++){
+        // Calculate the index of the current byte
+        int byteIndex = currentBit / 8; 
+        //Calculate the offeset of the current bit within byte
+        int bitOffset = currentBit % 8;  
+
+        // Check if the current bit is not set
+        if(checkBitStatus(bitOffset, bitmapArray[byteIndex]) == 0){ 
+            //if its free
+            firstFreeBit = currentBit; 
+            lastFreeBit = currentBit + blocksNeeded; 
+
+            //Iterate through the required contiguous bits to ensure all are free
+            for(; currentBit < lastFreeBit; currentBit++){ 
+                byteIndex = currentBit / 8;
+                bitOffset = currentBit % 8;
+
+                //check if any bit within this range is not free
+                if(checkBitStatus(bitOffset, bitmapArray[byteIndex]) == 1){ 
+                    break; //if not free break out of loop
                  }
             }
-            if(currBit == endBit){
-                return startBit;
+
+            //check if all required contiguous bits are free
+            if(currentBit == lastFreeBit){
+                //return the index of the first free bit
+                return firstFreeBit;
             }
         }
     }
-    printf("parameter numblockstoallocate: %d\n", numBlocksToAllocate);
-    printf("failed to find start index in getStartIndex\n");
+    //error messages for no suitable block found
+    printf("Parameter blocksNeeded: %d\n", blocksNeeded);
+    printf("Could not find start index in findFreeBitIndex\n");
     return -1; //we do not have room
 }
- //flips numBlocksToAllocate number of free contiguous bits to 1s
-int allocateBlocks(int numBlocksToAllocate, unsigned char* bitmap, int bitmapSize){ //returns the starting block number of the free space allocated on disc
-    //get vcb for bitmap and freeblockcount
-    //VCB* vcb = malloc(sizeof(VCB));
-    if(vcb==NULL){
-        printf("malloc for vcb failed!\n");
-        return -1;
-    }
-    //LBAread(vcb, 1, 0); //vcb is at block zero
-    if(vcb->freeBlockCount < numBlocksToAllocate){
-        printf("not enough space on disc to allocate %d number of blocks\n free block count is %d\n", numBlocksToAllocate, vcb->freeBlockCount);
-        return -1;
-    }
-    //find the index to start filling in 1s
-    int startIndex = getStartIndex(numBlocksToAllocate, bitmap, bitmapSize);
-   
-    if(startIndex == -1){ //if there is no space in bitmap 
-        return -1; 
-        
-    }
-    //fill in numBlocksToAllocate number of 1s
-    for(int currBit = startIndex; currBit< numBlocksToAllocate+startIndex; currBit++){
-        int byte = currBit / 8; //the byte in the bitmap that we are in  
-        int offset = currBit % 8; //the bit in the byte that we are at
-        unsigned char mask =   createMask(7-offset); //rightmost bit - offset
-        bitmap[byte] = ( bitmap[byte] |  mask ); //set the bit to a 1. Set it to a zero with & instead of |
-    }
-    //update number of free blocks in VCB
-    vcb->freeBlockCount -= numBlocksToAllocate;
-    //write the vcb back to disc
-    LBAwrite(vcb, 1, 0); //vcb is at block number 0
-    //return the starting index
-    LBAwrite(bitmap,bitmapBlockSize,BITMAP_LOCATION);
-    return startIndex;
-}
-
-
-//TODO: research extents
-//function may need to accept extents as an array arg of type “extent”
-//also research indirect extent table…
-//returns a 1 upon success and a 0 upon failure
-//flips numBlocksToFree number of contiguous bits from startingPos (including //startingPos)
-void deallocateBlocks(int numBlocksToFree, int startingPos){
-   //load bitmap if not already in memory
-   if(loadBitmap() == -1){
-    printf("loadBitmap failed in deallocatBlocks\n");
-    return;
-   }
-    //calculate the starting byte AKA what index to start at in the bitmap array
-	int startingByteAddress = startingPos/8;
-    //calculate the bit in the byte (ie offset in the array element)
-	short startingBitAddress = startingPos % 8;
-    //create mask to flip bits to off
-unsigned char mask = createMask(7-startingBitAddress);  
-	while(numBlocksToFree > 0){
-		//set the current bit to a zero.
-		bitmap[startingByteAddress] &=  (~mask); 
-        //move forward one bit
-        startingPos++;
-        //just freed a block so decrement numBlocksToFree
-        numBlocksToFree--; 
-         //recalculate the position in the array
-        startingByteAddress=startingPos/8;
-        startingBitAddress = startingPos % 8;
-        //update mask to target the next bit
-        mask = createMask(7-startingBitAddress);  
-    }
-
-}
-//loads the bitmap into memory if NOEXISTS returns 1 on success -1 on failure
+//function to load the bitmap into memory if it does not exist
+//should return 1 on success, -1 on failure
 int loadBitmap(){
-    //check if bitmap is in memory first
-if(bitmap==NULL){
-    //number of bytes that the bitmap is
-     int bitByteSize = ( ( ( vcb->numBlocks + 7/8) / 8 ) + (vcb->blockSize -1) / vcb->blockSize)  / vcb->blockSize;
-    //bitmap is not yet in memory so load it 
-    bitmap = malloc(bitByteSize + vcb->blockSize-1);
+    //check if bitmap is already in memory
     if(bitmap==NULL){
-        printf("malloc failed for bitmap in loadBitmap function\n");
-        return -1;
+        
+        // Calculate the size of the bitmap in bytes
+        int bitmapByteSize = (((vcb->numBlocks + 7) / 8) + (vcb->blockSize - 1))
+        / vcb->blockSize;
+
+        // If the bitmap is not in memory, allocate space for it
+        bitmap= malloc(bitmapByteSize + vcb->blockSize - 1);
+        
+        // Check if memory allocation failed
+        if(bitmap==NULL){
+            printf("Memory allocation failed for bitmap in loadBitmap()\n");
+            return -1;
+        }
+        // Calculate the number of blocks needed to hold the bitmap
+        int numberOfBitmapBlocks = (bitmapByteSize + vcb->blockSize - 1) / vcb->blockSize;
+
+        // Read the bitmap from the disk into memory
+        if (LBAread(bitmap, numberOfBitmapBlocks, vcb->bitmapIndex) != numberOfBitmapBlocks) {
+            printf("Disk read failed to load bitmap into memory\n");
+            return -1;
+        } 
     }
-    int bitmapBlocks = (bitByteSize + vcb->blockSize - 1) / vcb->blockSize;
-    if(LBAread(bitmap, bitmapBlocks, vcb->bitmapIndex) != bitmapBlocks){
-        printf("LBAread failed to load bitmap from disk\n");
-        return -1;
-    }
-}
 return 1;
+}
+//function to allocate a specific number of contiguous blocks in a bitmap
+int allocateBlocks(int blocksRequired, unsigned char* bitmapArray, int bitmapSize){ 
+    //handle error if VCB is NULL
+    if(vcb==NULL){
+        printf("memory allocation for vcb failed!\n");
+        return -1;
+    }
+    //handle error is there's not enough free blocks on the disk
+    if (vcb->freeBlockCount< blocksRequired) {
+        printf("Not enough space on disk to allocate %d blocks\nAvailable blocks: %d\n",
+        blocksRequired, vcb->freeBlockCount);
+        return -1;
+    }
+
+    //Find the starting index of freee contiguous blocks in the bitmap
+    int startingIndex = findFreeBitIndex(blocksRequired, bitmapArray, bitmapSize);
+   
+    //handle error if no space is available in the bitmap
+    if(startingIndex == -1){ 
+        return -1; 
+    }
+    
+    // Loop through the required number of contiguous blocks and mark them as allocated
+    for (int currentBit = startingIndex; currentBit < blocksRequired + startingIndex; 
+        currentBit++){
+
+        int byteIndex = currentBit / 8;  // Calculate the index of the current byte
+        int bitOffset = currentBit % 8;  // Calculate the offset of the current bit within the byte
+        
+        // Create a mask for the current bit
+        unsigned char bitMask = generateBitMask(7 - bitOffset); 
+
+        // Mark the current bit as allocated (set to 1)
+        bitmapArray[byteIndex] = (bitmapArray[byteIndex] | bitMask);
+        }
+    
+    // Update the number of available blocks in the Volume Control Block
+    vcb->freeBlockCount-= blocksRequired;
+
+    // Write the updated VCB back to disk (block number 0)
+    LBAwrite(vcb, 1, 0);
+
+    // Write the updated bitmap to disk
+    LBAwrite(bitmapArray, blockSize, BITMAP_POSITION);
+
+    // Return the starting index of the allocated blocks
+    return startingIndex;
+}
+
+
+// Function to deallocate a specific number of contiguous blocks in a bitmap
+// 'blocksToRelease' is the number of contiguous blocks to free
+// 'initialPosition' is the starting bit position of the blocks to be freed
+void releaseBlocks(int blocksToRelease, int initialPosition){
+   
+    //check if you can load the bitmap
+    if(loadBitmap() == -1){
+       printf("Bitmap loading failed in relasaeBlocks function\n");
+       return;
+    }
+
+    // Calculate the starting byte index in the bitmap array
+    int byteIndexStart = initialPosition / 8;
+   
+    // Calculate the starting bit's offset within the byte
+    short bitOffsetStart = initialPosition % 8;
+
+    // Create a mask to target the specific bit for deallocation
+    unsigned char bitMask = generateBitMask(7 - bitOffsetStart);
+
+    while(blocksToRelease> 0){
+        // Clear the current bit (set to 0), marking it as free
+        bitmap[byteIndexStart] &= (~bitMask);
+
+        initialPosition++; // Move to the next bit
+        blocksToRelease--; // Decrement the count of blocks to be freed
+
+        // Recalculate the current byte and bit positions in the array
+        byteIndexStart = initialPosition / 8;
+        bitOffsetStart = initialPosition % 8;
+
+        // Update the mask to target the next bit
+        bitMask = generateBitMask(7 - bitOffsetStart);
+    }
+
 }
