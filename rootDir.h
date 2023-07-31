@@ -7,32 +7,21 @@
 #include "extent.h"
 
 
-
+//definition of DE (directory entry) structure
 typedef struct DE{
 
-    //this character array will store the name of an entry
-    //entry name is limited to 20 characters
-    char name[20];
-    //size of an entry will be stored as a long
-    //limited to 10mb
-    unsigned long int size;
-    //location of an entry is stored as an int
-    int loc;
-    //variable to note when entry was last accessed
-    time_t last_accessed;
-    //variable to note when entry was created
-    time_t created_at;
-    //variable to note when an entry was last modified
-    time_t modified_at;
-    //we use a char to note type of a file
-     char file_type;
-    //an array of extents which will have up to 8 extents
-    extent extents[EXTENT_COUNT];
-    //if directory entry points to folder then isDirectory = 1
-    //if directory entry points to file then isDirectory = 0
-    int isDirectory;
+    char name[20];                 //array to hold the entry's name
+    unsigned long int size;        //holds the entry's size
+    int loc;                       //Int representing the entry's location
+    time_t last_accessed;          //timestamp indicating the last time the entry accessed
+    time_t created_at;             //timestamp indicating when the entry was created
+    time_t modified_at;            //timestamp indicating the last time was modified
+    char file_type;                //character representing the typoe of file
+    extent extents[EXTENT_COUNT];  //an array of extents, max of 8
+    int isDirectory;               //flag to identify whether the entry is a directory or file
 } DE;
 
+//function declaration for initializing a directory with a given block size
 int initDir(DE* parent, int blockSize);
 
 
