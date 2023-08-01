@@ -265,7 +265,7 @@ int fs_setcwd(char *pathname)
     int cwdBlocks = (sizeof(DE) * BUFFER_SIZE + vcb->block_size - 1) / vcb->block_size;
     if (LBAread(cwdPointer, cwdBlocks, res.direc[res.index_last].loc) != cwdBlocks)
     {
-        printf("LBAread operation failed to delete function\n");
+        // printf("LBAread operation failed to delete function\n");
     }
     free(copyOfPath);
     if (res.direc != NULL)
