@@ -33,7 +33,6 @@
 #define B_CHUNK_SIZE 512
 #define FILE_INITIAL_NUM_BLOCKS 10
 
-unsigned char *bitmap;
 typedef struct b_fcb
 {
 	/** TODO add al the information you need in the file control block **/
