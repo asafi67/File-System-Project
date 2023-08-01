@@ -1,3 +1,18 @@
+/**************************************************************
+ * Class:  CSC-415-01 Summer 2023
+ * Names:Anish Khadka, Joe Sand, Ameen Safi
+ * Student IDs:921952002,920525382, 920689065
+ * GitHub Name:
+ * Group Name: File System Soldiers
+ * Project: Basic File System
+ *
+ * File: fsInit.c
+ *
+ * Description: Main driver for file system assignment.
+ *
+ * This file is where you will start and initialize your system
+ *
+ **************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,10 +65,12 @@ PathReturn parsePath(char *path)
     // else path is a relative path
     else
     {
-        if (cwdPointer != NULL) {
+        if (cwdPointer != NULL)
+        {
             LBAread(root, numBlocks, cwdPointer[0].loc); // Start at cwd for relative path
         }
-        else {
+        else
+        {
             LBAread(root, numBlocks, 0);
         }
     }
@@ -359,7 +376,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     printf("insufficient space in the parent directory\n");
     if (parent.direc != NULL)
         free(parent.direc);
-    
+
     parent.direc = NULL;
     // return a failure '-1'
     return -1;
@@ -494,7 +511,8 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp)
     struct fs_diriteminfo *result = malloc(sizeof(struct fs_diriteminfo));
     result->d_reclen = sizeof(struct fs_diriteminfo); // Assign the size of
     result->fileType = (dirp->directory[dirp->dirEntryPosition].isDirectory == 1)
-                           ? FT_DIRECTORY : FT_REGFILE; // Determine the file type
+                           ? FT_DIRECTORY
+                           : FT_REGFILE; // Determine the file type
 
     // Copy the name of the current directory item
     strncpy(result->d_name, dirp->directory[dirp->dirEntryPosition].name, sizeof(result->d_name));

@@ -1,17 +1,19 @@
 /**************************************************************
- * Class:  CSC-415-0# Fall 2021
- * Names:
- * Student IDs:
- * GitHub Name:
- * Group Name:
+ * Class:  CSC-415-01 Summer 2023
+ * Names:Anish Khadka, Joe Sand, Ameen Safi
+ * Student IDs:921952002,920525382, 920689065
+ * GitHub Name: asafi67
+ * Group Name: File System Soldiers
  * Project: Basic File System
  *
  * File: b_io.c
  *
- * Description: Basic File System - Key File I/O Operations
+ * Description: Buffer input output
+ *
+ * This file is where we detailed all the necessary functions
+ * for file creation and file manipulation.
  *
  **************************************************************/
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h> // for malloc
@@ -95,15 +97,15 @@ b_io_fd b_open(char *filename, int flags)
 		b_init(); // Initialize our system
 
 	returnFd = b_getFCB(); // get our own file descriptor
-	
 
 	// Check for error - all used FCB's
 	char *pathCopy = malloc(strlen(filename) + 1);
-	if(pathCopy == NULL){ //check for successful allocation of pathCopy
+	if (pathCopy == NULL)
+	{ // check for successful allocation of pathCopy
 		printf("Memory allocation failed in b_open\n");
 		return -1;
 	}
-	
+
 	strcpy(pathCopy, filename);
 
 	// Parse the provided filename to get parent information
@@ -116,7 +118,7 @@ b_io_fd b_open(char *filename, int flags)
 	}
 
 	DE fileEntry;
-	memset(&fileEntry, 0, sizeof(DE)); //Ensure fileEntry is intialized
+	memset(&fileEntry, 0, sizeof(DE)); // Ensure fileEntry is intialized
 	fileEntry.name[0] = '\0';
 
 	if (parentInfo.status_code == 1) // Home/Desktop/newFile.txt
@@ -246,37 +248,37 @@ int b_seek(b_io_fd fd, off_t offset, int whence)
 		return (-1); // invalid file descriptor
 	}
 
-	 off_t newOffset = -1; // Variable to store the new offset position
+	off_t newOffset = -1; // Variable to store the new offset position
 
-    switch (whence)
-    {
-        case SEEK_SET:
-            // SEEK_SET sets the file offset to 'offset' bytes from the beginning of the file.
-            newOffset = offset;
-            break;
+	switch (whence)
+	{
+	case SEEK_SET:
+		// SEEK_SET sets the file offset to 'offset' bytes from the beginning of the file.
+		newOffset = offset;
+		break;
 
-        case SEEK_CUR:
-            // SEEK_CUR sets the file offset to 'offset' bytes from the current position.
-            newOffset = fcbArray[fd].file_offset + offset;
-            break;
+	case SEEK_CUR:
+		// SEEK_CUR sets the file offset to 'offset' bytes from the current position.
+		newOffset = fcbArray[fd].file_offset + offset;
+		break;
 
-        case SEEK_END:
-            // SEEK_END sets the file offset to 'offset' bytes from the end of the file.
-            newOffset = fcbArray[fd].file_entry->size + offset;
-            break;
+	case SEEK_END:
+		// SEEK_END sets the file offset to 'offset' bytes from the end of the file.
+		newOffset = fcbArray[fd].file_entry->size + offset;
+		break;
 
-        default:
-            // Invalid 'whence' value, do nothing and keep the current offset.
-            break;
-    }
+	default:
+		// Invalid 'whence' value, do nothing and keep the current offset.
+		break;
+	}
 
-    if (newOffset >= 0)
-    {
-        // If the newOffset is valid (non-negative), update the file offset for the given file descriptor 'fd'.
-        fcbArray[fd].file_offset = newOffset;
-    }
+	if (newOffset >= 0)
+	{
+		// If the newOffset is valid (non-negative), update the file offset for the given file descriptor 'fd'.
+		fcbArray[fd].file_offset = newOffset;
+	}
 
-    return newOffset; // Return the new offset position (or -1 in case of error).
+	return newOffset; // Return the new offset position (or -1 in case of error).
 }
 
 // Interface to write function
@@ -546,7 +548,6 @@ int b_read(b_io_fd fd, char *buffer, int count)
 		return -1;
 	}
 
-
 	// get how much content is left in file from current place.
 	int remaining_read = fcbArray[fd].file_entry->size - fcbArray[fd].file_offset;
 	if (remaining_read <= 0)
@@ -576,7 +577,7 @@ int b_read(b_io_fd fd, char *buffer, int count)
 	if (LBAread(fcbArray[fd].buf, 1, pos) != 1)
 	{
 		printf("Failed LBAread\n");
-		free(fcbArray[fd].buf); //Free buffer before return value is returned
+		free(fcbArray[fd].buf); // Free buffer before return value is returned
 		return -1;
 	}
 	// we just read a block so now we are on the next block.
