@@ -17,17 +17,17 @@ unsigned char* bitmap;
 // returns the first block if successful or -1 if failed.
 int initDir(DE* parent, int blockSize){
 int bit_byte_size = ( vcb->num_blocks + 7) / 8; //calculate the number of bytes required
-DE* dir = malloc(BUFFER_SIZE * sizeof(DE) + blockSize-1); //memory allocation
+DE* directory = malloc(BUFFER_SIZE * sizeof(DE) + blockSize-1); //memory allocation
 
 //check if memory allocation failed
-if(dir==NULL){
+if(directory==NULL){
     printf("Memory allocation failure in initDir\n");
     return -1;
 }
 
 //loop and initalize each directory entry to a free state
 for (int i = 0; i < BUFFER_SIZE; i++){
-    dir[i].name[0] = '\0';     //set the name of every directory item to empty string (free)
+    directory[i].name[0] = '\0';     //set the name of every directory item to empty string (free)
 }
 
 // Load the bitmap, return failure if unable to do so.
@@ -58,16 +58,16 @@ if(parent == NULL){
 }
 else{
     //else set '..' to point to the parent directory
-    dir[1] = parent[0];
-    dir[1].name[0] = '.';
-    dir[1].name[1] = '.';
-    dir[1].name[2] = '\0'; 
+    directory[1] = parent[0];
+    directory[1].name[0] = '.';
+    directory[1].name[1] = '.';
+    directory[1].name[2] = '\0'; 
 }
 
 int dirNumBlocks = (BUFFER_SIZE * sizeof(DE) + blockSize-1) / blockSize;
 
 //write the directory entries to disk at the specified block number
-if(LBAwrite(dir, dirNumBlocks, block_number) != dirNumBlocks){
+if(LBAwrite(directory, dirNumBlocks, block_number) != dirNumBlocks){
     printf("Failed to perform LBAwrite within initDir\n");
     return -1;
 }

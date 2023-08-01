@@ -33,5 +33,6 @@ DE fs_mkfile (DE* parent, char file_name[], int name_size);
 
 //Function to take in a file block and return a specific block number
 int LBA_from_File_Block(int n, DE* p);
+
 #endif
 

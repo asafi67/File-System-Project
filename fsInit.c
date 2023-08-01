@@ -31,7 +31,7 @@
 //signature of file system checked to see if fs is mounted
 #define MAGIC_NUMBER 415001    //ameen set this
 //maximum number of chars for a file path in our fs
-#define MAX_PATH_LEN 400
+#define MAX_PATH_LEN 500
 //declaring vcb
 VolumeControlBlock* vcb;
 //declare a bitmap blocksize

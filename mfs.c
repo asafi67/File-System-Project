@@ -240,6 +240,7 @@ int fs_setcwd(char *pathname){
     res.direc = NULL;
     return 0;
 }
+  
 // Function to create a new directory; returns 1 if successful, -1 if failed
 int fs_mkdir(const char *pathname, mode_t mode){
     // Identify the starting index of the last element in the path

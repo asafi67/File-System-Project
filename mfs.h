@@ -50,7 +50,7 @@ typedef struct fdDir{
 // This struct packages the status code and directory entry (DE) pointer as a return value
 typedef struct PathReturn{
 	DE* direc; // Pointer to a directory entry (e.g., for A/B/C, it would point to B).
-	int status_code // Status of the path passed to parsePath
+	int status_code; // Status of the path passed to parsePath
 	int index_last;  // Index of the last token in the path. 
 }PathReturn;
 
