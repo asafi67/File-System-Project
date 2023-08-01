@@ -13,7 +13,7 @@
 * modifying, moving, removing, creating files or directories and more. 
 * These functions are designed to be used through a command line interface.
 **************************************************************/
-#include <stdlib.h>
+git#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
