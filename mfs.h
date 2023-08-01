@@ -1,7 +1,8 @@
 /**************************************************************
  * Class:  CSC-415-01 Summer 2023
  * Name: Anish Khadka, Joe Sand, Ameen Safi
- * Student IDs: asafi67
+ * Student IDs: 921952002,920525382, 920689065
+ * GitHub Name: asafi67
  * Project: Basic File System
  *
  * File: mfs.h
