@@ -2,15 +2,15 @@
  * Class:  CSC-415-01 Summer 2023
  * Names:Anish Khadka, Joe Sand, Ameen Safi
  * Student IDs:921952002,920525382, 920689065
- * GitHub Name:
+ * GitHub Name: asafi67
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: mfs.c
  *
- * Description: Main driver for file system assignment.
+ * Description: my file system. 
  *
- * This file is where you will start and initialize your system
+ * 
  *
  **************************************************************/
 #include <stdio.h>

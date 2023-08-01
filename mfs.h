@@ -1,12 +1,12 @@
 /**************************************************************
- * Class:  CSC-415
- * Name: Professor Bierman
- * Student ID: N/A
+ * Class:  CSC-415-01 Summer 2023
+ * Name: Anish Khadka, Joe Sand, Ameen Safi
+ * Student IDs: asafi67
  * Project: Basic File System
  *
  * File: mfs.h
  *
- * Description:
+ * Description: header file for my file system.
  *
  *
  **************************************************************/

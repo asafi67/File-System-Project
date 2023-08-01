@@ -6,11 +6,11 @@
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: rootDir.h
  *
- * Description: Main driver for file system assignment.
+ * Description: header file for the rootDir.c
  *
- * This file is where you will start and initialize your system
+ *
  *
  **************************************************************/
 #ifndef ROOTDIR_H_

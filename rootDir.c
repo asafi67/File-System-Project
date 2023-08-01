@@ -6,11 +6,11 @@
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: rootDir.c
  *
- * Description: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
+ * Description: implementation for managing and initalizing a 
+ * directory within a custom file system. 
+ * 
  *
  **************************************************************/
 #include <stdlib.h>
