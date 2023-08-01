@@ -1,18 +1,17 @@
 /**************************************************************
-* Class:  CSC-415-0# - Summer 2023
-* Names: 
-* Student IDs:
-* GitHub Name:
-* Group Name:
+* Class:  CSC-415-01 Summer 2023
+* Names: Anish Khadka, Joe Sand, Ameen Safi
+* Student IDs: 921952002,920525382, 920689065
+* GitHub Name: asafi67
+* Group Name: File System Soldiers
 * Project: Basic File System
 *
 * File: fsShell.c
 *
-* Description: Main driver for file system assignment.
-*
-* Make sure to set the #defined on the CMDxxxx_ON from 0 to 1 
-* when you are ready to test that feature
-*
+* Description: This file incluides a series of commands and utilites
+* designed to interact with a file system. It includes functions for 
+* modifying, moving, removing, creating files or directories and more. 
+* These functions are designed to be used through a command line interface.
 **************************************************************/
 #include <stdlib.h>
 #include <unistd.h>

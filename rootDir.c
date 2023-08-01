@@ -2,15 +2,15 @@
  * Class:  CSC-415-01 Summer 2023
  * Names:Anish Khadka, Joe Sand, Ameen Safi
  * Student IDs:921952002,920525382, 920689065
- * GitHub Name:
+ * GitHub Name: asafi67
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: rootDir.c
  *
- * Description: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
+ * Description: implementation for managing and initalizing a 
+ * directory within a custom file system. 
+ * 
  *
  **************************************************************/
 #include <stdlib.h>

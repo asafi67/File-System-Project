@@ -6,11 +6,11 @@
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: volumeCB.c
  *
- * Description: Main driver for file system assignment.
+ * Description: VolumeCB.c
  *
- * This file is where you will start and initialize your system
+ * 
  *
  **************************************************************/
 #include <stdio.h>

@@ -8,11 +8,10 @@
  *
  * File: b_io.c
  *
- * Description: Buffer input output
- *
- * This file is where we detailed all the necessary functions
- * for file creation and file manipulation.
- *
+ * Description: Dedicated to the buffered I/O operations of the 
+ * file system. It provides an interface for managing files within
+ * the system, including file opening, initialization, and handling
+ * File Control Blocks (FCB).
  **************************************************************/
 #include <stdio.h>
 #include <unistd.h>

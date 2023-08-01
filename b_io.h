@@ -2,16 +2,16 @@
  * Class:  CSC-415-01 Summer 2023
  * Names:Anish Khadka, Joe Sand, Ameen Safi
  * Student IDs:921952002,920525382, 920689065
- * GitHub Name:
+ * GitHub Name: asafi67
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: b_io.h
  *
- * Description: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
- *
+ * Description: This is a header file for b_io.c. This file defines
+ * the interface for buffered I/O operations in the file system.
+ * It includes essentail functions for managing files, such as opening
+ * reading, writing, seeking, and closing.
  **************************************************************/
 #ifndef _B_IO_H
 #define _B_IO_H
