@@ -100,6 +100,11 @@ b_io_fd b_open(char *filename, int flags)
 
 	// Check for error - all used FCB's
 	char *pathCopy = malloc(strlen(filename) + 1);
+	if(pathCopy == NULL){ //check for successful allocation of pathCopy
+		printf("Memory allocation failed in b_open\n");
+		return -1;
+	}
+	
 	strcpy(pathCopy, filename);
 
 	// Parse the provided filename to get parent information
@@ -112,6 +117,7 @@ b_io_fd b_open(char *filename, int flags)
 	}
 
 	DE fileEntry;
+	memset(&fileEntry, 0, sizeof(DE)); //Ensure fileEntry is intialized
 	fileEntry.name[0] = '\0';
 
 	if (parentInfo.status_code == 1) // Home/Desktop/newFile.txt
@@ -571,6 +577,7 @@ int b_read(b_io_fd fd, char *buffer, int count)
 	if (LBAread(fcbArray[fd].buf, 1, pos) != 1)
 	{
 		printf("Failed LBAread\n");
+		free(fcbArray[fd].buf); //Free buffer before return value is returned
 		return -1;
 	}
 	// we just read a block so now we are on the next block.
