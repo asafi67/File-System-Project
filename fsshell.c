@@ -1,5 +1,5 @@
 /**************************************************************
-* Class:  CSC-415-0# - Summer 2023
+* Class:  CSC-415-01 Summer 2023
 * Names: 
 * Student IDs:
 * GitHub Name:

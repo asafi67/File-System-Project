@@ -2,16 +2,16 @@
  * Class:  CSC-415-01 Summer 2023
  * Names:Anish Khadka, Joe Sand, Ameen Safi
  * Student IDs:921952002,920525382, 920689065
- * GitHub Name:
+ * GitHub Name: asafi67
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: extent.h
  *
- * Description: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
- *
+ * Description: This header file defines a structure named 'extent'
+ * that represents a contiguous set of blocks in a file system. An
+ * extent is used as a continuous area of storage used to represent
+ * part of a file, improving storage efficency and access speed.
  **************************************************************/
 #ifndef EXTENT_H
 #define EXTENT_H

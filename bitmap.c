@@ -2,16 +2,17 @@
  * Class:  CSC-415-01 Summer 2023
  * Names:Anish Khadka, Joe Sand, Ameen Safi
  * Student IDs:921952002,920525382, 920689065
- * GitHub Name:
+ * GitHub Name: asafi67
  * Group Name: File System Soldiers
  * Project: Basic File System
  *
- * File: fsInit.c
+ * File: bitmap.c
  *
- * Description: Main driver for file system assignment.
- *
- * This file is where you will start and initialize your system
- *
+ * Description: Defines the functionality related to the bitmap. 
+ * The bitmap is a data structure used to track free and allocated
+ * blocks. Bitmap is declared as an array of unsigned charachters
+ * and various functions are defined to manage, inspect, and modify
+ * the bitmap. 
  **************************************************************/
 #include <stdlib.h>
 #include <unistd.h>
