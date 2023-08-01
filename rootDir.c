@@ -11,8 +11,6 @@
 #include "rootDir.h"
 #include "mfs.h"
 
-
-unsigned char* bitmap;
 // Function to initialize a new directory on the disk; 
 // returns the first block if successful or -1 if failed.
 int initDir(DE* parent, int blockSize){

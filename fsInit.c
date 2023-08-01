@@ -36,8 +36,6 @@
 VolumeControlBlock* vcb;
 //declare a bitmap blocksize
 int bitmapBlockSize;
-//declare bitmap
-unsigned char* bitmap;
 //returns -1 on failure 0 on success
 DE* currentDirectoryPointer;
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)

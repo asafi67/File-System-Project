@@ -15,7 +15,7 @@
 
 // Allocates memory for the current working directory "cwd" string
 char *cwdString = "/";
-DE *cwdPointer;
+DE *cwdPointer = NULL;
 
 // parsePath function to parse a given file path, returning status codes:
 // 0 - Invalid path
@@ -50,7 +50,12 @@ PathReturn parsePath(char *path)
     // else path is a relative path
     else
     {
-        LBAread(root, numBlocks, cwdPointer[0].loc); // Start at cwd for relative path
+        if (cwdPointer != NULL) {
+            LBAread(root, numBlocks, cwdPointer[0].loc); // Start at cwd for relative path
+        }
+        else {
+            LBAread(root, numBlocks, 0);
+        }
     }
 
     pathRet.direc = root;                   // set the starting directory
@@ -260,7 +265,7 @@ int fs_setcwd(char *pathname)
     int cwdBlocks = (sizeof(DE) * BUFFER_SIZE + vcb->block_size - 1) / vcb->block_size;
     if (LBAread(cwdPointer, cwdBlocks, res.direc[res.index_last].loc) != cwdBlocks)
     {
-        printf("LBAread operation failed to delete function\n");
+        // printf("LBAread operation failed to delete function\n");
     }
     free(copyOfPath);
     if (res.direc != NULL)
