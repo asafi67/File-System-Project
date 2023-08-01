@@ -184,7 +184,7 @@ b_io_fd b_open(char *filename, int flags)
 	fcbArray[returnFd].bytes_read = 0;
 	fcbArray[returnFd].file_offset = 0;
 	fcbArray[returnFd].parent_location = parentInfo.direc[0].loc;
-	*fcbArray[returnFd].file_entry = fileEntry;
+	fcbArray[returnFd].file_entry = &fileEntry;  // line which fixed the touch command
 
 	int numberOfBlocks = 0;
 	int i = 0;
